@@ -65,6 +65,16 @@ sudo systemctl reload nginx
 
 DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录，gitignore 已排除）。
 
+## 宝塔面板部署记录（2026-08-15 实际执行）
+
+- 目录 `/www/wwwroot/tuppy.oahubs.com`，属组 www:www
+- SSH 用户 ubuntu（非 root），sudo 免密
+- 需要 `apt install python3.12-venv`（宝塔系统无 ensurepip）
+- **systemd 必须设 `User=www`**：不设则以 root 运行，root 建的 tuppy.db www 写不了（readonly database）。这是本次踩的唯一坑
+- **cron 必须装进 www 用户 crontab**（`sudo -u www crontab -`），与 systemd 同身份
+- 反代：宝塔面板自建反代项目 → `http://127.0.0.1:8321`（用户侧配置，本仓库不涉及）
+- 验证：18 测试 VPS 全过；录血压 → 早班 → 首页出提议"妈的血压有 1 天没记了，今天也还没记"
+
 ## 版本记录
 
 见 CHANGELOG.md。

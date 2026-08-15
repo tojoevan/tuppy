@@ -23,7 +23,17 @@ Tuppy 不是聊天机器人，不是 todo 工具。它是一天两班的值守�
 
 ## 当前状态
 
-v0.1 开发中。当前设计见 [architecture.md](architecture.md)，一天剧本见 [docs/day-script.md](docs/day-script.md)。
+v0.1 开发中。
+
+| 文档 | 内容 |
+|---|---|
+| [docs/v0.1-design.md](docs/v0.1-design.md) | v0.1 完整设计（**构建唯一参照**） |
+| [docs/day-script.md](docs/day-script.md) | 一天剧本（voice 参照） |
+| [docs/architecture.md](docs/architecture.md) | 愿景层（冻结） |
+| [docs/testing.md](docs/testing.md) | 测试策略 |
+| [docs/release.md](docs/release.md) | 发布与部署 |
+| [docs/security.md](docs/security.md) | 安全模型 |
+| [CHANGELOG.md](CHANGELOG.md) | 版本历史 |
 
 ## v0.1 范围
 

@@ -45,7 +45,7 @@
 {% if recent %}
 <h3 style="margin-top:28px">最近记的</h3>
 <table>
-<tr><th>日期</th><th>域</th><th>分类</th><th>人</th><th>标题/值</th></tr>
+<tr><th>日期</th><th>域</th><th>分类</th><th>人</th><th>标题/值</th><th></th></tr>
 {% for r in recent %}
 <tr>
   <td>{{ r.happened_at[:16] }}{% if r.ended_at %} → {{ r.ended_at[:16] }}{% endif %}</td>
@@ -53,6 +53,13 @@
   <td>{{ r.category }}</td>
   <td>{{ r.person }}</td>
   <td>{{ r.title or r.value or r.amount or '' }}{% if r.note %} · {{ r.note }}{% endif %}</td>
+  <td>
+    <a href="/entry/{{ r.id }}/edit">改</a>
+    <form method="post" action="/entry/{{ r.id }}/delete" style="display:inline"
+          onsubmit="return confirm('删掉这条？')">
+      <button class="btn" style="padding:0 6px;border:none;background:none;text-decoration:underline;color:#a33">删</button>
+    </form>
+  </td>
 </tr>
 {% endfor %}
 </table>

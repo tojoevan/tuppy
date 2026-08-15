@@ -214,6 +214,65 @@ def entry_add():
     return redirect(url_for("entries"))
 
 
+@app.route("/entry/<int:eid>/edit", methods=["GET", "POST"])
+def entry_edit(eid):
+    conn = engine.get_db()
+    row = conn.execute(
+        "SELECT * FROM entries WHERE id=?", (eid,)
+    ).fetchone()
+    if not row:
+        conn.close()
+        flash("没找到这条。")
+        return redirect(url_for("entries"))
+    if request.method == "POST":
+        domain = (request.form.get("domain", "").strip()
+                  or request.form.get("domain_custom", "").strip())
+        happened = (request.form.get("happened_date", "").strip()
+                    + (" " + request.form.get("happened_time", "").strip()
+                       if request.form.get("happened_time", "").strip() else ""))
+        ended_date = request.form.get("ended_date", "").strip()
+        ended_time = request.form.get("ended_time", "").strip()
+        ended = (ended_date + (" " + ended_time if ended_time else "")) or None
+        if not domain or not engine.parse_dt(happened):
+            flash("没改：域和日期是必填的。")
+            return redirect(url_for("entry_edit", eid=eid))
+        if ended and not engine.parse_dt(ended):
+            flash("没改：结束时间格式不对。")
+            return redirect(url_for("entry_edit", eid=eid))
+        conn.execute(
+            "UPDATE entries SET domain=?, category=?, person=?, happened_at=?,"
+            " ended_at=?, amount=?, value=?, title=?, note=? WHERE id=?",
+            (
+                domain,
+                request.form.get("category", "").strip(),
+                request.form.get("person", "").strip(),
+                happened,
+                ended,
+                request.form.get("amount", "").strip() or None,
+                request.form.get("value", "").strip() or None,
+                request.form.get("title", "").strip(),
+                request.form.get("note", "").strip(),
+                eid,
+            ),
+        )
+        conn.commit()
+        conn.close()
+        flash("改好了。")
+        return redirect(url_for("entries"))
+    conn.close()
+    return render_template("entry_edit.html", row=row, domains=SEED_DOMAINS)
+
+
+@app.route("/entry/<int:eid>/delete", methods=["POST"])
+def entry_delete(eid):
+    conn = engine.get_db()
+    conn.execute("DELETE FROM entries WHERE id=?", (eid,))
+    conn.commit()
+    conn.close()
+    flash("删掉了。")
+    return redirect(url_for("entries"))
+
+
 # ---------- 导入 ----------
 
 CSV_FIELDS = ["domain", "person", "happened_at", "category",

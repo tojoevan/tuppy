@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>改这条</h3>
+{% set d = row.happened_at.split(' ')[0] if ' ' in (row.happened_at or '') else (row.happened_at or '')[:10] %}
+{% set t = row.happened_at.split(' ')[1] if ' ' in (row.happened_at or '') else '' %}
+{% set ed = row.ended_at.split(' ')[0] if row.ended_at and ' ' in row.ended_at else (row.ended_at or '')[:10] %}
+{% set et = row.ended_at.split(' ')[1] if row.ended_at and ' ' in row.ended_at else '' %}
+<form method="post" action="/entry/{{ row.id }}/edit">
+  <label>域 *</label>
+  <select name="domain">
+    <option value="">{{ row.domain }}</option>
+    {% for d in domains %}
+    <option value="{{ d }}" {{ 'selected' if d == row.domain }}>{{ d }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="domain_custom" placeholder="自定义域">
+  <label>分类</label>
+  <input type="text" name="category" value="{{ row.category }}">
+  <label>谁的事</label>
+  <input type="text" name="person" value="{{ row.person }}">
+  <label>日期 *</label>
+  <input type="date" name="happened_date" value="{{ d }}" required>
+  <label>时间</label>
+  <input type="time" name="happened_time" value="{{ t }}">
+  <label>结束日期/时间</label>
+  <input type="date" name="ended_date" value="{{ ed }}"> <input type="time" name="ended_time" value="{{ et }}">
+  <label>金额</label>
+  <input type="number" name="amount" step="0.01" value="{{ row.amount if row.amount is not none else '' }}">
+  <label>数值</label>
+  <input type="text" name="value" value="{{ row.value or '' }}">
+  <label>标题</label>
+  <input type="text" name="title" value="{{ row.title }}">
+  <label>备注</label>
+  <input type="text" name="note" value="{{ row.note }}">
+  <div style="margin-top:10px">
+    <button class="btn primary">保存</button>
+    <a class="btn" href="/entries">取消</a>
+  </div>
+</form>
+{% endblock %}

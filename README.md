@@ -30,6 +30,7 @@ v0.1 开发中。
 | [docs/v0.1-design.md](docs/v0.1-design.md) | v0.1 完整设计（**构建唯一参照**） |
 | [docs/day-script.md](docs/day-script.md) | 一天剧本（voice 参照） |
 | [docs/architecture.md](docs/architecture.md) | 愿景层（冻结） |
+| [docs/status.md](docs/status.md) | **项目当前状态**（部署、URL、判据进度） |
 | [docs/testing.md](docs/testing.md) | 测试策略 |
 | [docs/release.md](docs/release.md) | 发布与部署 |
 | [docs/security.md](docs/security.md) | 安全模型 |

@@ -18,8 +18,6 @@
   {% endif %}
   <div class="muted">{{ p.domain }}{% if p.category %} · {{ p.category }}{% endif %} · {{ '早班' if p.shift == 'morning' else '晚班' }}</div>
 </div>
-{% else %}
-<p>今天没什么要跟你说的。</p>
 {% endfor %}
 {% if history %}
 <h3 style="margin-top:24px">最近处理过的</h3>

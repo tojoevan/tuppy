@@ -99,6 +99,12 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 - Tuppy 侧：`notify.py` 用 ntfy（.env: TUPPY_NTFY_URL/TOPIC/USER/PASS）
 - **VPS 连 GitHub 不稳**（curl 56 / 443 超时）：代码同步 fallback = scp 直传。auto-deploy cron 5 分钟轮询会在网络恢复后自动收敛，文件内容一致无冲突
 
+## 版本显示与部署加固（2026-08-16）
+
+- 页面 header 显示 git 短 hash（`v804c0fb` 格式），5 分钟内可肉眼确认自动部署是否生效
+- 部署脚本 `git pull` 改 `git reset --hard origin/main`：scp 直传会弄脏工作树导致 pull 卡死；reset 安全（tuppy.db/.env/backups 均 gitignored，不受影响）
+- VPS 连 GitHub 已恢复，scp fallback 不再需要，正常走 push → 5 分钟自动部署
+
 ## 版本记录
 
 见 CHANGELOG.md。

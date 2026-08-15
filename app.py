@@ -11,7 +11,9 @@ import json
 import os
 import uuid
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import (
+    Flask, flash, redirect, render_template, request, send_from_directory, url_for
+)
 
 import engine
 
@@ -73,6 +75,11 @@ def inject_light():
     light = health_light(conn)
     conn.close()
     return {"light": light, "version": git_version()}
+
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    return send_from_directory(engine.BASE / "static", filename)
 
 
 @app.route("/")

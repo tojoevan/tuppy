@@ -19,6 +19,22 @@ from flask import (
 
 import engine
 
+
+def _load_dotenv():
+    """把 .env 合并进 os.environ（cron/systemd 不一定注入，进程内自读最稳）。"""
+    f = engine.BASE / ".env"
+    if not f.exists():
+        return
+    for line in f.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        os.environ.setdefault(k.strip(), v.strip())
+
+
+_load_dotenv()
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("TUPPY_SECRET", "dev-secret-change-me")
 app.permanent_session_lifetime = dt.timedelta(days=30)

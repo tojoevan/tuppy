@@ -48,11 +48,11 @@
 <tr><th>日期</th><th>域</th><th>分类</th><th>人</th><th>标题/值</th></tr>
 {% for r in recent %}
 <tr>
-  <td>{{ r.happened_at[:10] }}</td>
+  <td>{{ r.happened_at[:16] }}{% if r.ended_at %} → {{ r.ended_at[:16] }}{% endif %}</td>
   <td>{{ r.domain }}</td>
   <td>{{ r.category }}</td>
   <td>{{ r.person }}</td>
-  <td>{{ r.title or r.value or r.amount or '' }}</td>
+  <td>{{ r.title or r.value or r.amount or '' }}{% if r.note %} · {{ r.note }}{% endif %}</td>
 </tr>
 {% endfor %}
 </table>

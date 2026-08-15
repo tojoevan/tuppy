@@ -1,7 +1,5 @@
 # Tuppy 发布文档
 
-> 状态：骨架。
-
 ## 版本规则
 
 - v0.x 语义：x = 阶段（0.1 值守 / 0.2 推送 / 0.3 安卓……）
@@ -11,14 +9,62 @@
 ## 发布流程
 
 1. 版本设计文档定稿（本仓库 docs/）
-2. 实现 + 测试通过（见 testing.md）
+2. 实现 + 测试通过（pytest tests/）
 3. 部署 VPS，跑满判据天数
 4. 记录实际数字进 CHANGELOG
 5. 由使用摩擦决定下一版本方向
 
-## 部署
+## 部署（VPS，Ubuntu/Debian）
 
-- systemd 托管 Flask 进程
-- nginx 反代 + Basic Auth
-- crontab 两班
-- DB 每日备份轮转 7 份
+```bash
+# 1. 拉代码
+git clone https://github.com/tojoevan/tuppy.git
+cd tuppy
+
+# 2. 环境
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+export TUPPY_SECRET=<随机串>   # 写进 .env，gitignore 已排除
+
+# 3. systemd 托管（挂了自动重启）
+# /etc/systemd/system/tuppy.service:
+[Unit]
+Description=Tuppy web
+After=network.target
+
+[Service]
+WorkingDirectory=/path/to/tuppy
+Environment=TUPPY_SECRET=<随机串>
+ExecStart=/path/to/tuppy/.venv/bin/python app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+sudo systemctl enable --now tuppy
+
+# 4. nginx 反代 + Basic Auth（Flask 零鉴权代码）
+sudo apt install -y nginx apache2-utils
+sudo htpasswd -c /etc/nginx/tuppy.htpasswd <用户名>
+# /etc/nginx/sites-available/tuppy:
+server {
+    listen 80;
+    location / {
+        auth_basic "Tuppy";
+        auth_basic_user_file /etc/nginx/tuppy.htpasswd;
+        proxy_pass http://127.0.0.1:8321;
+    }
+}
+sudo ln -s /etc/nginx/sites-available/tuppy /etc/nginx/sites-enabled/
+sudo systemctl reload nginx
+
+# 5. cron 两班
+30 6 * * * cd /path/to/tuppy && .venv/bin/python shifts.py morning >> tuppy-cron.log 2>&1
+0 22 * * * cd /path/to/tuppy && .venv/bin/python shifts.py evening >> tuppy-cron.log 2>&1
+```
+
+DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录，gitignore 已排除）。
+
+## 版本记录
+
+见 CHANGELOG.md。

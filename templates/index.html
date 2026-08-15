@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<p>{{ greeting }}</p>
+{% for p in proposals %}
+<div class="proposal">
+  <div>{{ p.text }}</div>
+  {% if p.status == 'pending' %}
+  <div style="margin-top:8px">
+    <form method="post" action="/proposal/{{ p.id }}/keep">
+      <button class="btn primary">记下</button>
+    </form>
+    <form method="post" action="/proposal/{{ p.id }}/reject">
+      <button class="btn">不用</button>
+    </form>
+  </div>
+  {% else %}
+  <div class="muted" style="margin-top:4px">已记下 ✓</div>
+  {% endif %}
+  <div class="muted">{{ p.domain }}{% if p.category %} · {{ p.category }}{% endif %} · {{ '早班' if p.shift == 'morning' else '晚班' }}</div>
+</div>
+{% else %}
+<p>今天没什么要跟你说的。</p>
+{% endfor %}
+{% if history %}
+<h3 style="margin-top:24px">最近处理过的</h3>
+{% for p in history %}
+<div class="muted">{{ p.text }} — {{ '你说不用' if p.status == 'rejected' else '没理' }}</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

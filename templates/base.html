@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuppy</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:640px;margin:0 auto;
+     padding:16px;color:#222;background:#fafaf7;line-height:1.6}
+header{margin-bottom:8px}
+h1{display:inline;font-size:1.3em;margin-right:8px}
+nav{margin:10px 0 16px;border-bottom:1px solid #ddd;padding-bottom:8px}
+nav a{margin-right:14px;text-decoration:none;color:#555}
+nav a.active{font-weight:bold;color:#222;border-bottom:2px solid #222}
+.light{display:inline-block;width:9px;height:9px;border-radius:50%;
+       margin-right:4px;vertical-align:middle}
+.green{background:#3a3}.yellow{background:#da2}.red{background:#c33}
+.muted{color:#777;font-size:.88em}
+.proposal{border:1px solid #ddd;border-radius:8px;padding:12px 14px;
+          margin:10px 0;background:#fff}
+.proposal form{display:inline}
+.btn{display:inline-block;padding:6px 14px;border:1px solid #999;
+     border-radius:6px;text-decoration:none;color:#222;background:#fff;
+     font-size:.95em;cursor:pointer;font-family:inherit}
+.btn.primary{background:#222;color:#fff;border-color:#222}
+.flash{background:#e9e9f5;padding:8px 14px;border-radius:6px;margin:10px 0}
+form label{display:block;margin:8px 0 2px;font-size:.9em;color:#555}
+input,select,textarea{border:1px solid #ccc;border-radius:6px;
+     padding:6px 8px;font-size:.95em;font-family:inherit;max-width:100%}
+table{border-collapse:collapse;width:100%}
+td,th{border-bottom:1px solid #eee;padding:6px 8px;text-align:left;
+      font-size:.92em}
+</style>
+</head>
+<body>
+<header>
+  <h1>Tuppy</h1>
+  <span class="light {{ light[0] }}" title="{{ light[1] }}"></span>
+  <span class="muted">{{ light[1] }}</span>
+</header>
+<nav>
+  {% set page = request.path %}
+  <a href="/" class="{{ 'active' if page == '/' }}">提议</a>
+  <a href="/todos" class="{{ 'active' if page.startswith('/todo') }}">待办</a>
+  <a href="/entries" class="{{ 'active' if page.startswith('/entr') }}">录入</a>
+  <a href="/shadow" class="{{ 'active' if page.startswith('/shadow') }}">影子</a>
+  <a href="/weekly" class="{{ 'active' if page.startswith('/weekly') }}">周报</a>
+</nav>
+{% with messages = get_flashed_messages() %}
+  {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+{% endwith %}
+{% block content %}{% endblock %}
+</body>
+</html>

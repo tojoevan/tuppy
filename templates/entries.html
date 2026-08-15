@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>记一条</h3>
+<form method="post" action="/entry/add">
+  <label>域 *</label>
+  <select name="domain">
+    <option value="">选一个或自定义</option>
+    {% for d in domains %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+  </select>
+  <input type="text" name="domain_custom" placeholder="自定义域，选了上面就留空" style="margin-left:6px">
+  <label>分类（血压/电费/食品…）</label>
+  <input type="text" name="category">
+  <label>谁的事</label>
+  <input type="text" name="person" placeholder="妈 / 女儿 / 我，可留空">
+  <label>日期 *（事件日/测量日/到期日）</label>
+  <input type="date" name="happened_date" required>
+  <label>时间（可选，留空 = 全天）</label>
+  <input type="time" name="happened_time">
+  <label>结束日期/时间（日程用，可选）</label>
+  <input type="date" name="ended_date"> <input type="time" name="ended_time">
+  <label>金额（账本用）</label>
+  <input type="number" name="amount" step="0.01">
+  <label>数值（健康用，如 140/88）</label>
+  <input type="text" name="value">
+  <label>标题（日程/疫苗/物品名）</label>
+  <input type="text" name="title">
+  <label>备注</label>
+  <input type="text" name="note">
+  <div style="margin-top:10px"><button class="btn primary">记下</button></div>
+</form>
+
+<h3 style="margin-top:28px">导入</h3>
+<form method="post" action="/import/csv" enctype="multipart/form-data">
+  <label>CSV（账本/健康等，首行 header：domain,person,happened_at,category,amount,value,title,note）</label>
+  <input type="file" name="file" accept=".csv">
+  <button class="btn">上传 CSV</button>
+</form>
+<form method="post" action="/import/ics" enctype="multipart/form-data" style="margin-top:10px">
+  <label>ICS（日历导出）— 这些日程是谁的？</label>
+  <input type="text" name="person" placeholder="可留空">
+  <input type="file" name="file" accept=".ics">
+  <button class="btn">上传 ICS</button>
+</form>
+
+{% if recent %}
+<h3 style="margin-top:28px">最近记的</h3>
+<table>
+<tr><th>日期</th><th>域</th><th>分类</th><th>人</th><th>标题/值</th></tr>
+{% for r in recent %}
+<tr>
+  <td>{{ r.happened_at[:10] }}</td>
+  <td>{{ r.domain }}</td>
+  <td>{{ r.category }}</td>
+  <td>{{ r.person }}</td>
+  <td>{{ r.title or r.value or r.amount or '' }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+{% endblock %}

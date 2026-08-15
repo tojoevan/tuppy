@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<p>导入预览：<b>{{ ok }} 条</b>可以写入，{{ bad }} 条解析失败。</p>
+{% if bad_rows %}
+<h4>失败的行</h4>
+{% for lineno, reason in bad_rows %}
+<div class="muted">第 {{ lineno }} 行：{{ reason }}</div>
+{% endfor %}
+{% endif %}
+<form method="post" action="/import/confirm" style="margin-top:16px">
+  <input type="hidden" name="batch" value="{{ batch }}">
+  <button class="btn primary">确认写入 {{ ok }} 条</button>
+  <a class="btn" href="/entries">取消</a>
+</form>
+{% endblock %}

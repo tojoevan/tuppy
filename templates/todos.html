@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+{% if open_todos %}
+<p>你记下的事：</p>
+{% for t in open_todos %}
+<div class="proposal">
+  <div>□ {{ t.text }}</div>
+  <form method="post" action="/todo/{{ t.id }}/done" style="margin-top:6px">
+    <button class="btn">做完了</button>
+  </form>
+</div>
+{% endfor %}
+{% else %}
+<p>待办是空的。点提议里的"记下"，就会出现在这里。</p>
+{% endif %}
+{% if done_todos %}
+<h3 style="margin-top:24px">最近归档的</h3>
+{% for t in done_todos %}
+<div class="muted">✓ {{ t.text }}</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

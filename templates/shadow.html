@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<p>今天它看到但没说的，都在这里。第一周每天生成，之后周报附 top 5。</p>
+{% if obs_map %}
+<h3>降为观察的规则</h3>
+<form method="post" action="/shadow/revive">
+  {% for rid, (rule, items) in obs_map.items() %}
+  <div class="proposal">
+    <label>
+      <input type="checkbox" name="rule_ids" value="{{ rule.id }}">
+      {{ rule.domain }}·{{ rule.category or '全部' }}·{{ rule.template }}
+      — {{ items|length }} 条观察
+    </label>
+    {% for it in items %}
+    <div class="muted">{{ it.item_text }}</div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <button class="btn primary">明天开始说这些</button>
+  <a class="btn" href="/">继续沉默</a>
+</form>
+{% endif %}
+{% for date, items in grouped.items() %}
+<h3 style="margin-top:20px">{{ date }}</h3>
+{% for it in items %}
+<div class="proposal">
+  <div>{{ it.item_text }}</div>
+  <div class="muted">{{ it.source_type }} · {{ it.rule_hint }}</div>
+</div>
+{% endfor %}
+{% else %}
+<p>影子报告还是空的。</p>
+{% endfor %}
+{% endblock %}

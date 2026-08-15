@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<p>本周 {{ monday }} ~ {{ sunday }}</p>
+<div class="proposal">
+  这周我说了 {{ total }} 次：<br>
+  你听进去 {{ kept }} 次，{{ expired }} 次没理我，{{ rejected }} 次说不用。
+</div>
+{% if changes %}
+<h3>我学到的</h3>
+{% for c in changes %}
+<div class="proposal">
+  <div>{{ c.label }}</div>
+  <div class="muted">{{ c.reason }}</div>
+</div>
+{% endfor %}
+{% endif %}
+{% if shadow_top %}
+<h3>看到但没说的</h3>
+{% for s in shadow_top %}
+<div class="proposal">
+  <div>{{ s.item_text }}</div>
+  <div class="muted">{{ s.source_type }} · {{ s.rule_hint }}</div>
+</div>
+{% endfor %}
+{% endif %}
+{% if undone %}
+<h3>你记下还没勾掉的</h3>
+{% for t in undone %}
+<div class="proposal">□ {{ t.text }}</div>
+{% endfor %}
+{% endif %}
+<p class="muted">{{ next_line }}</p>
+{% endblock %}

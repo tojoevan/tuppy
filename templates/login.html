@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuppy · 进门</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:360px;margin:15vh auto;
+     padding:16px;color:#222;background:#fafaf7}
+h1{font-size:1.4em}
+input[type=password]{border:1px solid #ccc;border-radius:6px;
+     padding:10px 12px;font-size:1em;width:100%;box-sizing:border-box}
+.btn{display:inline-block;padding:10px 16px;border:1px solid #999;
+     border-radius:6px;text-decoration:none;color:#222;background:#fff;
+     font-size:1em;cursor:pointer;font-family:inherit;margin-top:10px;
+     width:100%}
+.btn.primary{background:#222;color:#fff;border-color:#222}
+.error{color:#a33;margin-top:8px;font-size:.9em}
+</style>
+</head>
+<body>
+<h1>Tuppy</h1>
+<p>家里的事，进门说。</p>
+<form method="post">
+  <input type="password" name="password" placeholder="密码" autofocus required>
+  <button class="btn primary">进门</button>
+</form>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+</body>
+</html>

@@ -23,8 +23,11 @@ def client(tmp_path, monkeypatch):
     engine.init_db()
     import app as a
 
+    monkeypatch.setattr(a, "TUPPY_PASSWORD", "secret-pw")
     a.app.config["TESTING"] = True
-    return a.app.test_client()
+    c = a.app.test_client()
+    c.post("/login", data={"password": "secret-pw"})
+    return c
 
 
 def _import_csv(client, content):

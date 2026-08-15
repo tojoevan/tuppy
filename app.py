@@ -6,19 +6,25 @@
 
 import csv
 import datetime as dt
+import hmac
 import io
 import json
 import os
 import uuid
 
 from flask import (
-    Flask, flash, redirect, render_template, request, send_from_directory, url_for
+    Flask, flash, redirect, render_template, request, send_from_directory,
+    session, url_for
 )
 
 import engine
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("TUPPY_SECRET", "dev-secret-change-me")
+app.permanent_session_lifetime = dt.timedelta(days=30)
+
+# 登录密码独立于 session 密钥。部署时生成随机值写 .env。
+TUPPY_PASSWORD = os.environ.get("TUPPY_PASSWORD", "tuppy-change-me")
 
 
 VERSION = "0.1"
@@ -47,6 +53,41 @@ SEED_DOMAINS = ["健康", "日程", "账本", "物品", "疫苗"]
 def ensure_db():
     if not engine.DB_PATH.exists():
         engine.init_db()
+
+
+@app.before_request
+def require_login():
+    # static 与登录页免鉴权——PWA 图标/清单不被挡，登录页本身可达
+    if request.path.startswith("/static/"):
+        return None
+    if request.path == "/login":
+        return None
+    if not session.get("authed"):
+        return redirect(url_for("login"))
+
+
+def _password_ok(candidate):
+    return hmac.compare_digest(candidate, TUPPY_PASSWORD)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("authed"):
+        return redirect(url_for("index"))
+    error = None
+    if request.method == "POST":
+        if _password_ok(request.form.get("password", "")):
+            session.permanent = True
+            session["authed"] = True
+            return redirect(url_for("index"))
+        error = "密码不对。"
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 def health_light(conn):

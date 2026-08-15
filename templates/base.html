@@ -50,6 +50,9 @@ td,th{border-bottom:1px solid #eee;padding:6px 8px;text-align:left;
   <a href="/entries" class="{{ 'active' if page.startswith('/entr') }}">录入</a>
   <a href="/shadow" class="{{ 'active' if page.startswith('/shadow') }}">影子</a>
   <a href="/weekly" class="{{ 'active' if page.startswith('/weekly') }}">周报</a>
+  <form method="post" action="/logout" style="display:inline;float:right">
+    <button class="btn" style="padding:2px 10px;font-size:.85em">出门</button>
+  </form>
 </nav>
 {% with messages = get_flashed_messages() %}
   {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}

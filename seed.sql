@@ -9,4 +9,6 @@ INSERT INTO rules (kind, domain, category, template, params, priority) VALUES
 ('detection', '账本', '电费', 'surge',
  '{"compare":"prev_month","ratio":1.3,"min_history_days":30,"min_amount":50}', 5),
 ('detection', '物品', '', 'expiry',
- '{"days_before":2,"recurring":false}', 4);
+ '{"days_before":2,"recurring":false}', 4),
+('detection', '信用卡', '', 'expiry',
+ '{"days_before":2,"recurring":false}', 5);

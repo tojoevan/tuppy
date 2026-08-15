@@ -75,6 +75,14 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 - 反代：宝塔面板自建反代项目 → `http://127.0.0.1:8321`（用户侧配置，本仓库不涉及）
 - 验证：18 测试 VPS 全过；录血压 → 早班 → 首页出提议"妈的血压有 1 天没记了，今天也还没记"
 
+## 自动部署（2026-08-15）
+
+- `/usr/local/bin/tuppy-deploy.sh` + root crontab `*/5` 轮询：fetch 比对 HEAD → 有变更 pull → **只有代码文件变更才 restart**（docs/README/CHANGELOG 变更只 pull 不重启）→ 重启后 curl 健康检查
+- git 操作以 `sudo -u www` 身份跑（文件属主不变，避开之前的 root/www 身份坑）
+- 首次需 `sudo -u www git config --global --add safe.directory /www/wwwroot/tuppy.oahubs.com`（dubious ownership）
+- 不做 webhook：公网触发端点有攻击面，单人项目轮询足够
+- **注意：schema.sql 变更不会自动迁移**，那种提交需手动处理，脚本只重启不管迁移
+
 ## 版本记录
 
 见 CHANGELOG.md。

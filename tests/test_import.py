@@ -75,3 +75,81 @@ def test_import_dedup_amount_and_null(client, monkeypatch):
     _import_csv(client, CSV)
     n2 = count()
     assert n1 == 2 and n2 == 2, f"去重失败: {n1} -> {n2}"
+
+
+def test_import_ics_timed_and_allday(client):
+    """ICS 导入：定时事件带结束时间+备注，全天事件 date-only。"""
+    from datetime import datetime
+
+    from icalendar import Calendar, Event
+
+    cal = Calendar()
+    e1 = Event()
+    e1.add("summary", "季度评审会")
+    e1.add("dtstart", datetime(2026, 8, 20, 14, 0))
+    e1.add("dtend", datetime(2026, 8, 20, 16, 0))
+    e1.add("description", "带上季度数据")
+    cal.add_component(e1)
+    e2 = Event()
+    e2.add("summary", "体检")
+    e2.add("dtstart", datetime(2026, 8, 25).date())
+    cal.add_component(e2)
+
+    r = client.post(
+        "/import/ics",
+        data={"file": (io.BytesIO(cal.to_ical()), "t.ics"), "person": "我"},
+        content_type="multipart/form-data",
+    )
+    m = re.search(r'name="batch" value="(\w+)"', r.get_data(as_text=True))
+    assert m
+    client.post("/import/confirm", data={"batch": m.group(1)})
+
+    conn = engine.get_db()
+    rows = conn.execute(
+        "SELECT title, happened_at, ended_at, note, person FROM entries"
+        " ORDER BY id"
+    ).fetchall()
+    assert len(rows) == 2
+    timed_row = rows[0]
+    assert timed_row["title"] == "季度评审会"
+    assert timed_row["ended_at"] == "2026-08-20 16:00:00"
+    assert timed_row["note"] == "带上季度数据"
+    assert timed_row["person"] == "我"
+    allday = rows[1]
+    assert allday["title"] == "体检"
+    assert allday["ended_at"] is None
+    assert allday["happened_at"] == "2026-08-25"
+
+
+def test_import_ics_then_overlap_detected(client):
+    """ICS 导入的日程能与手动录入的事件产生冲突提议。"""
+    from datetime import datetime
+
+    from icalendar import Calendar, Event
+
+    cal = Calendar()
+    e1 = Event()
+    e1.add("summary", "季度评审会")
+    e1.add("dtstart", datetime(2026, 8, 20, 14, 0))
+    e1.add("dtend", datetime(2026, 8, 20, 16, 0))
+    cal.add_component(e1)
+    r = client.post(
+        "/import/ics",
+        data={"file": (io.BytesIO(cal.to_ical()), "t.ics"), "person": "我"},
+        content_type="multipart/form-data",
+    )
+    m = re.search(r'name="batch" value="(\w+)"', r.get_data(as_text=True))
+    client.post("/import/confirm", data={"batch": m.group(1)})
+
+    client.post(
+        "/entry/add",
+        data={"domain": "日程", "person": "我",
+              "happened_date": "2026-08-20", "happened_time": "15:00",
+              "title": "疫苗乙脑"},
+    )
+    conn = engine.get_db()
+    rule = conn.execute(
+        "SELECT * FROM rules WHERE domain='日程' AND template='overlap'"
+    ).fetchone()
+    hits = engine.scan_overlap(conn, rule, {"check_between": "same_person"})
+    assert any("季度评审会" in h["text"] for h in hits)

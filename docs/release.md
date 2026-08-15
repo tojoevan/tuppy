@@ -83,6 +83,22 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 - 不做 webhook：公网触发端点有攻击面，单人项目轮询足够
 - **注意：schema.sql 变更不会自动迁移**，那种提交需手动处理，脚本只重启不管迁移
 
+## ntfy 推送自建（2026-08-16）
+
+- 装 `/usr/bin/ntfy` v2.27.0（deb，官方 sha256 校验后安装）
+- 配置 `/etc/ntfy/server.yml`：
+  - `listen-http: 127.0.0.1:2586`（只本机，公网走反代）
+  - `base-url: https://ntfy.oahubs.com`（**ntfy 不支持子路径托管**，base-url 必须裸域名——踩坑记录）
+  - `upstream-base-url: https://ntfy.sh`（iOS 及时推送必需，APNs 中转）
+  - `behind-proxy: true`
+  - `auth-file: /var/lib/ntfy/user.db` + `auth-default-access: deny-all`
+  - `auth-users: tuppy:<bcrypt hash>:admin`（`printf 'pw\npw\n' | ntfy user hash` 生成）
+  - `web-root: disable`
+- systemd 自带（deb 包），`Restart=on-failure`
+- 测试：带 auth publish/subscribe 通，无 auth 403
+- Tuppy 侧：`notify.py` 用 ntfy（.env: TUPPY_NTFY_URL/TOPIC/USER/PASS）
+- **VPS 连 GitHub 不稳**（curl 56 / 443 超时）：代码同步 fallback = scp 直传。auto-deploy cron 5 分钟轮询会在网络恢复后自动收敛，文件内容一致无冲突
+
 ## 版本记录
 
 见 CHANGELOG.md。

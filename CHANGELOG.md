@@ -11,6 +11,8 @@
 
 ## v0.1（开发中）
 
+**推送**（v0.2-lite，2026-08-16）：自建 ntfy v2.27.0（VPS 127.0.0.1:2586，auth 单用户，iOS 走 ntfy.sh APNs 中转）。班后有话说才推，无事闭嘴。PushDeer 弃用（app 停在 2022，半维护）。
+
 **代码初版**：
 
 - schema.sql：六主表 + rule_log + import_staging（seed 四规则：缺测血压/冲突日程/突变电费/到期物品）

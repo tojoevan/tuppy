@@ -105,6 +105,14 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 - 部署脚本 `git pull` 改 `git reset --hard origin/main`：scp 直传会弄脏工作树导致 pull 卡死；reset 安全（tuppy.db/.env/backups 均 gitignored，不受影响）
 - VPS 连 GitHub 已恢复，scp fallback 不再需要，正常走 push → 5 分钟自动部署
 
+## 鉴权替换（2026-08-16）
+
+- **Basic Auth 弃用**（PWA standalone 弹窗缺陷、无登出）。换 Flask 登录页 + 签名 session cookie（30 天）
+- 登录页 `/login`，密码存 `.env` 的 `TUPPY_PASSWORD`（随机 hex），session 密钥 `TUPPY_SECRET`
+- **app.py 启动时自读 .env**——systemd 环境注入不可靠，进程内读文件最稳（曾因 TUPPY_PASSWORD 不可见导致登录失败）
+- `/static/` 免鉴权（PWA 图标/清单），其余全锁，未登录 302 到 /login
+- 宝塔面板的 Basic Auth（目录保护）需用户手动关闭，否则双层锁
+
 ## 版本记录
 
 见 CHANGELOG.md。

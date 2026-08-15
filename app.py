@@ -18,6 +18,23 @@ import engine
 app = Flask(__name__)
 app.secret_key = os.environ.get("TUPPY_SECRET", "dev-secret-change-me")
 
+
+def git_version():
+    """当前 git 提交短 hash。部署自动更新后，页面上可确认版本。"""
+    try:
+        import subprocess
+
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+            cwd=engine.BASE,
+        )
+        if out.returncode == 0:
+            return out.stdout.strip()
+    except Exception:
+        pass
+    return "unknown"
+
 SEED_DOMAINS = ["健康", "日程", "账本", "物品", "疫苗"]
 
 
@@ -52,7 +69,7 @@ def inject_light():
     conn = engine.get_db()
     light = health_light(conn)
     conn.close()
-    return {"light": light}
+    return {"light": light, "version": git_version()}
 
 
 @app.route("/")

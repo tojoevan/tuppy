@@ -24,12 +24,16 @@ def db(tmp_path, monkeypatch):
 
 
 def add_entry(db, domain, category="", person="", happened_at="",
-              ended_at=None, amount=None, value=None, title="", status="open"):
+              ended_at=None, amount=None, value=None, title="", status="open",
+              created_at=None):
+    # created_at 缺省 = 录入时间与 happened_at 同一天（常规使用场景）。
+    # 传 None 时显式用 happened_at 日期，避免 SQLite 实时钟干扰 fixture 假时钟。
+    ca = created_at or (happened_at[:10] + " 09:00" if happened_at else None)
     db.execute(
         "INSERT INTO entries (domain, category, person, happened_at, ended_at,"
-        " amount, value, title, status) VALUES (?,?,?,?,?,?,?,?,?)",
+        " amount, value, title, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (domain, category, person, happened_at, ended_at, amount, value,
-         title, status),
+         title, status, ca),
     )
     db.commit()
 
@@ -62,6 +66,22 @@ def test_gap_evening_triggers_two_days_missed(db):
 def test_gap_evening_silent_for_single_missed_day(db):
     add_entry(db, "健康", "血压", "妈", "2026-08-14 08:00")
     assert engine.scan_gap(db, rule(db, "gap"), {"frequency": "daily", "max_gap": 1}, "evening") is None
+
+
+def test_gap_coldstart_history_import_silent(db):
+    """冷启动：历史导入的最后一条 3 天前，但今天才录入——不算缺测。
+
+    回归：曾因缺测从 happened_at 起算，刚导入历史就被轰炸。
+    """
+    db.execute(
+        "INSERT INTO entries (domain, category, person, happened_at,"
+        " created_at) VALUES ('健康','血压','妈妈','2026-08-12 08:00',"
+        " '2026-08-15 10:00')"
+    )
+    db.commit()
+    assert engine.scan_gap(db, rule(db, "gap"),
+                           {"frequency": "daily", "max_gap": 1},
+                           "morning") is None
 
 
 # ---------- 模板 2：冲突 overlap ----------

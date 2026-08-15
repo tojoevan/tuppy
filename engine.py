@@ -118,20 +118,35 @@ def scan_gap(conn, rule, params, shift):
     last_dt = parse_dt(last["happened_at"])
     if not last_dt:
         return None
+    # 冷启动：缺测只从"开始使用 Tuppy"起算（该类别首条数据的录入日）。
+    # 历史导入的空白不算缺测，否则刚导入 30 天历史就被轰炸。
+    first = conn.execute(
+        "SELECT created_at FROM entries WHERE domain=? AND category=?"
+        " ORDER BY id LIMIT 1",
+        (rule["domain"], rule["category"]),
+    ).fetchone()
+    base = last_dt.date()
+    if first:
+        try:
+            watch_start = dt.date.fromisoformat(first["created_at"][:10])
+            if watch_start > base:
+                base = watch_start
+        except ValueError:
+            pass
     # 人称放在括号里，避免"妈"+"的"拼接出歧义文本
     name = rule["category"] or rule["domain"]
     if last["person"]:
         name = f"{name}（{last['person']}）"
     unit = FREQ_UNIT.get(freq, "天")
     if shift == "morning":
-        missed = _missed_periods(last_dt.date(), period, include_today=False)
+        missed = _missed_periods(base, period, include_today=False)
         if missed < max_gap:
             return None
         text = f"{name}有 {missed} {unit}没记了"
         if last_dt.date() < today():
             text += "，今天也还没记"
     else:
-        missed = _missed_periods(last_dt.date(), period, include_today=True)
+        missed = _missed_periods(base, period, include_today=True)
         if missed < max_gap + 1:
             return None
         text = f"{name}连续 {missed} {unit}没记了"

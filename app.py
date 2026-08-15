@@ -19,8 +19,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("TUPPY_SECRET", "dev-secret-change-me")
 
 
+VERSION = "0.1"
+
+
 def git_version():
-    """当前 git 提交短 hash。部署自动更新后，页面上可确认版本。"""
+    """语义版本 + git 短 hash。版本号看阶段，hash 看部署是否生效。"""
     try:
         import subprocess
 
@@ -30,10 +33,10 @@ def git_version():
             cwd=engine.BASE,
         )
         if out.returncode == 0:
-            return out.stdout.strip()
+            return f"{VERSION}.{out.stdout.strip()}"
     except Exception:
         pass
-    return "unknown"
+    return VERSION
 
 SEED_DOMAINS = ["健康", "日程", "账本", "物品", "疫苗"]
 

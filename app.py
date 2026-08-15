@@ -309,13 +309,20 @@ def import_ics():
 
 
 def _dedupe_exists(conn, row):
+    # CSV 空字段是 '' → None；数值字符串 → float，与库内 REAL 列同型比较
+    amount = row.get("amount") or None
+    if amount is not None:
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            pass
     return conn.execute(
         "SELECT id FROM entries WHERE domain=? AND person=?"
         " AND happened_at=? AND title=?"
         " AND COALESCE(amount,-999999)=COALESCE(?,-999999) LIMIT 1",
         (row.get("domain", ""), row.get("person", ""),
          row.get("happened_at", ""), row.get("title", ""),
-         row.get("amount")),
+         amount),
     ).fetchone()
 
 

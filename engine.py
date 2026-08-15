@@ -118,8 +118,10 @@ def scan_gap(conn, rule, params, shift):
     last_dt = parse_dt(last["happened_at"])
     if not last_dt:
         return None
-    person = (last["person"] + "的") if last["person"] else ""
-    name = f"{person}{rule['category'] or rule['domain']}"
+    # 人称放在括号里，避免"妈"+"的"拼接出歧义文本
+    name = rule["category"] or rule["domain"]
+    if last["person"]:
+        name = f"{name}（{last['person']}）"
     unit = FREQ_UNIT.get(freq, "天")
     if shift == "morning":
         missed = _missed_periods(last_dt.date(), period, include_today=False)

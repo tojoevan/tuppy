@@ -30,7 +30,7 @@ def load_env():
     return env
 
 
-def send(title, body):
+def send(title, body, click_url=None):
     env = load_env()
     url = env.get("TUPPY_NTFY_URL", "http://127.0.0.1:2586").rstrip("/")
     topic = env.get("TUPPY_NTFY_TOPIC", "tuppy")
@@ -47,6 +47,9 @@ def send(title, body):
 
             token = base64.b64encode(f"{user}:{password}".encode()).decode()
             req.add_header("Authorization", f"Basic {token}")
+        if click_url:
+            # 点通知跳转，不填则默认打开 ntfy web
+            req.add_header("Click", click_url)
         urllib.request.urlopen(req, timeout=10)
     except Exception as e:
         print(f"notify ntfy failed: {e}")

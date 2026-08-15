@@ -13,19 +13,24 @@ import notify
 
 def after_shift(shift):
     """班后推送：有话说才推，无事闭嘴。最多一天两条（天然打扰预算）。"""
+    site = notify.load_env().get(
+        "TUPPY_SITE_URL", "https://tuppy.oahubs.com"
+    )
     conn = engine.get_db()
     if shift == "morning":
         n = conn.execute(
             "SELECT COUNT(*) FROM proposals WHERE status='pending'"
         ).fetchone()[0]
         if n:
-            notify.send("Tuppy 早班", f"{n} 件想跟你说")
+            notify.send("Tuppy 早班", f"{n} 件想跟你说", click_url=site)
     else:
         n = conn.execute(
             "SELECT COUNT(*) FROM todos WHERE done=0"
         ).fetchone()[0]
         if n:
-            notify.send("Tuppy 晚班", f"{n} 件记下的事还没处理")
+            notify.send(
+                "Tuppy 晚班", f"{n} 件记下的事还没处理", click_url=site + "/todos"
+            )
     conn.close()
 
 

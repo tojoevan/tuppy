@@ -53,3 +53,21 @@ def send(title, body, click_url=None):
         urllib.request.urlopen(req, timeout=10)
     except Exception as e:
         print(f"notify ntfy failed: {e}")
+
+
+def mqtt_status(json_payload: str):
+    """发布 Tuppy 状态到本地 mosquitto（ESP32 固件订阅 tuppy/status）。
+
+    用 mosquitto_pub CLI——VPS 已装，免 python 依赖。
+    失败静默：固件链路是增强通道，断不影响主功能。
+    """
+    import subprocess
+
+    try:
+        subprocess.run(
+            ["mosquitto_pub", "-h", "127.0.0.1",
+             "-t", "tuppy/status", "-m", json_payload],
+            timeout=5, capture_output=True,
+        )
+    except Exception as e:
+        print(f"mqtt_status failed: {e}")

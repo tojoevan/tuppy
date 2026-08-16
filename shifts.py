@@ -31,6 +31,26 @@ def _budget_silence(conn, shift, text):
     print(f"budget exceeded ({shift}), silent to shadow")
 
 
+def publish_device_status(conn):
+    """班后发布固件状态：提议数/待办数/健康。ESP32 屏显数据源。"""
+    import json
+
+    proposals = conn.execute(
+        "SELECT COUNT(*) c FROM proposals WHERE status='pending'"
+    ).fetchone()["c"]
+    todos = conn.execute(
+        "SELECT COUNT(*) c FROM todos WHERE done=0"
+    ).fetchone()["c"]
+    health = conn.execute(
+        "SELECT status FROM health ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    notify.mqtt_status(json.dumps({
+        "proposals": proposals,
+        "todos": todos,
+        "health": health["status"] if health else "unknown",
+    }, ensure_ascii=False))
+
+
 def after_shift(shift):
     """班后推送：有话说才推，无事闭嘴。预算闸门在前。
 
@@ -40,6 +60,7 @@ def after_shift(shift):
         "TUPPY_SITE_URL", "https://tuppy.oahubs.com"
     )
     conn = engine.get_db()
+    publish_device_status(conn)
     quota = engine.current_quota(conn)
     used = engine.pushed_today(conn)
     if shift == "morning":

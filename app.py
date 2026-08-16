@@ -106,6 +106,15 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/export")
+def data_export():
+    """数据是文件：下载完整 SQLite。"""
+    return send_from_directory(
+        engine.DB_PATH.parent, engine.DB_PATH.name, as_attachment=True,
+        download_name=f"tuppy-{dt.date.today().isoformat()}.db",
+    )
+
+
 @app.route("/deploy", methods=["POST"])
 def deploy_trigger():
     """写 trigger 文件。root cron 每分钟捡一次，捡到就跑部署脚本。
@@ -248,11 +257,17 @@ def todo_done(tid):
 @app.route("/entries")
 def entries():
     conn = engine.get_db()
+    offset = max(0, request.args.get("offset", 0, type=int))
     recent = conn.execute(
-        "SELECT * FROM entries ORDER BY id DESC LIMIT 10"
+        "SELECT * FROM entries ORDER BY id DESC LIMIT 10 OFFSET ?",
+        (offset,),
     ).fetchall()
+    total = conn.execute("SELECT COUNT(*) c FROM entries").fetchone()["c"]
     conn.close()
-    return render_template("entries.html", recent=recent, domains=SEED_DOMAINS)
+    return render_template(
+        "entries.html", recent=recent, total=total, offset=offset,
+        domains=SEED_DOMAINS,
+    )
 
 
 @app.route("/entry/add", methods=["POST"])

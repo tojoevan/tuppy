@@ -43,7 +43,7 @@
 </form>
 
 {% if recent %}
-<h3 style="margin-top:28px">最近记的</h3>
+<h3 style="margin-top:28px">记的（共 {{ total }} 条）</h3>
 <div class="table-wrap">
 <table>
 <tr><th>日期</th><th>域</th><th>分类</th><th>人</th><th>标题/值</th><th></th></tr>
@@ -65,5 +65,12 @@
 {% endfor %}
 </table>
 </div>
+{% if offset + 10 < total %}
+<p><a class="btn" href="/entries?offset={{ offset + 10 }}">更早的</a></p>
+{% endif %}
+{% if offset > 0 %}
+<p><a class="btn" href="/entries?offset={{ [offset - 10, 0]|max }}">更新的</a></p>
+{% endif %}
+<p class="muted" style="margin-top:16px"><a href="/export">下载全部数据（SQLite）</a> —— 数据是文件，归你。</p>
 {% endif %}
 {% endblock %}

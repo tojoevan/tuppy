@@ -68,3 +68,10 @@ def test_logout(client):
 def test_static_reachable_without_login(client):
     r = client.get("/static/manifest.json")
     assert r.status_code == 200
+
+
+def test_deploy_button_writes_trigger(tmp_path, monkeypatch, client):
+    monkeypatch.setattr(engine, "BASE", tmp_path)
+    r = client.post("/deploy")
+    assert r.status_code == 302
+    assert (tmp_path / ".deploy-trigger").exists()

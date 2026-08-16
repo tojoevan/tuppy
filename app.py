@@ -106,6 +106,21 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/deploy", methods=["POST"])
+def deploy_trigger():
+    """写 trigger 文件。root cron 每分钟捡一次，捡到就跑部署脚本。
+
+    Flask 是 www 用户，不直接跑 git/systemctl——零权限扩张。
+    """
+    trigger = engine.BASE / ".deploy-trigger"
+    try:
+        trigger.write_text("go")
+        flash("已通知部署，一分钟内生效。刷新页面看版本号变化。")
+    except OSError:
+        flash("通知部署失败，稍后再试。")
+    return redirect(url_for("index"))
+
+
 def health_light(conn):
     """页面顶部健康灯：(颜色, 文案)。"""
     rows = conn.execute(

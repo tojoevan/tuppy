@@ -42,6 +42,9 @@ td.time-col{white-space:normal;min-width:110px}
 <header>
   <h1>Tuppy</h1>
   <span class="muted">v{{ version }}</span>
+  <form method="post" action="/deploy" style="display:inline">
+    <button class="btn" style="padding:1px 8px;font-size:.8em">更新</button>
+  </form>
   <span class="light {{ light[0] }}" title="{{ light[1] }}"></span>
   <span class="muted">{{ light[1] }}</span>
 </header>

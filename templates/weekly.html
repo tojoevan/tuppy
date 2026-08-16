@@ -37,6 +37,11 @@
 <div class="proposal">□ {{ t.text }}</div>
 {% endfor %}
 {% endif %}
+<h3>本周打扰</h3>
+<div class="proposal">
+  推了 {{ pushes }} 次 / 预算 {{ quota * 7 }} 次，你响应 {{ responded }} 次<br>
+  {% if over_budget %}{{ over_budget }} 次超预算，静默进了影子{% else %}没有超预算{% endif %}
+</div>
 <h3>这阵子的准头</h3>
 <div class="table-wrap">
 <table>

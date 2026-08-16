@@ -306,6 +306,65 @@ def scan_expiry(conn, rule, params):
     return hits
 
 
+# ---------- 打扰预算 ----------
+
+DEFAULT_QUOTA = 2
+MIN_QUOTA = 1
+
+
+def current_quota(conn):
+    """当前每日推送配额。无记录 = 默认。"""
+    row = conn.execute(
+        "SELECT quota FROM budget_log ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    return row["quota"] if row else DEFAULT_QUOTA
+
+
+def pushed_today(conn):
+    """今天已推次数（不含 weekly 心跳——心跳独立通道不占预算）。"""
+    return conn.execute(
+        "SELECT COUNT(*) c FROM push_log WHERE date=? AND shift!='weekly'",
+        (today().isoformat(),),
+    ).fetchone()["c"]
+
+
+def quota_adjust(conn, action, quota, reason):
+    conn.execute(
+        "INSERT INTO budget_log (date, action, quota, reason) VALUES (?,?,?,?)",
+        (today().isoformat(), action, quota, reason),
+    )
+
+
+def auto_adjust_quota(conn):
+    """晚班调用。连续忽略 → 降配额；连续响应 → 恢复默认。
+
+    判断窗口：最近 3 天每天都有推送且全部零响应 → -1（最低 1）。
+              最近 5 天每天都有推送且全部有响应 → 恢复默认。
+    """
+    quota = current_quota(conn)
+    days = conn.execute(
+        "SELECT date, SUM(responded) r, COUNT(*) c FROM push_log"
+        " WHERE shift!='weekly' GROUP BY date ORDER BY date DESC LIMIT 5"
+    ).fetchall()
+    if len(days) >= 3 and all(
+        d["c"] > 0 and d["r"] == 0 for d in days[:3]
+    ):
+        if quota > MIN_QUOTA:
+            quota_adjust(
+                conn, "adjust_down", quota - 1,
+                "连续 3 天推送你都没理，我少说一点",
+            )
+        return
+    if len(days) >= 5 and all(
+        d["c"] > 0 and d["r"] == d["c"] for d in days[:5]
+    ):
+        if quota < DEFAULT_QUOTA:
+            quota_adjust(
+                conn, "adjust_up", DEFAULT_QUOTA,
+                "连续 5 天你都有回应，恢复默认",
+            )
+
+
 # ---------- 两班 ----------
 
 def check_previous_shift(conn):
@@ -376,6 +435,36 @@ def downgrade(conn, rule, reason):
     )
 
 
+def fill_push_response(conn):
+    """晚班回填：今天推送对应的内容是否有响应。
+
+    早班推送 → 对应 pending proposals 当天是否被 kept/rejected。
+    晚班推送 → 对应 todos 当天是否有 done。
+    """
+    rows = conn.execute(
+        "SELECT id, shift FROM push_log WHERE date=?"
+        " AND responded=0 AND shift!='weekly'",
+        (today().isoformat(),),
+    ).fetchall()
+    for p in rows:
+        if p["shift"] == "morning":
+            responded = conn.execute(
+                "SELECT COUNT(*) c FROM proposals WHERE shift='morning'"
+                " AND date(created_at)=? AND status IN ('kept','rejected')",
+                (today().isoformat(),),
+            ).fetchone()["c"]
+        else:
+            responded = conn.execute(
+                "SELECT COUNT(*) c FROM todos WHERE done=1 AND done_at IS NOT NULL"
+                " AND date(done_at)=?",
+                (today().isoformat(),),
+            ).fetchone()["c"]
+        if responded:
+            conn.execute(
+                "UPDATE push_log SET responded=1 WHERE id=?", (p["id"],)
+            )
+
+
 def backup_db():
     backups = BASE / "backups"
     backups.mkdir(exist_ok=True)
@@ -442,6 +531,8 @@ def run_shift(shift):
             )
         if shift == "evening":
             apply_feedback(conn)
+            fill_push_response(conn)
+            auto_adjust_quota(conn)
             backup_db()
         conn.execute(
             "INSERT INTO health (date, shift, status, error) VALUES (?,?,?,?)",

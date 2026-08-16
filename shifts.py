@@ -5,38 +5,75 @@
     python shifts.py evening   # 晚班（cron 22:00）
 """
 
+import datetime as dt
 import sys
 
 import engine
 import notify
 
 
+def _record_push(conn, shift, text):
+    conn.execute(
+        "INSERT INTO push_log (date, shift, text) VALUES (?,?,?)",
+        (engine.today().isoformat(), shift, text),
+    )
+    conn.commit()
+
+
+def _budget_silence(conn, shift, text):
+    """超预算：不推，静默进影子。"""
+    conn.execute(
+        "INSERT INTO shadow (date, item_text, rule_hint, source_type, rule_id)"
+        " VALUES (?,?,?,?, NULL)",
+        (engine.today().isoformat(), text, "打扰预算", "超预算"),
+    )
+    conn.commit()
+    print(f"budget exceeded ({shift}), silent to shadow")
+
+
 def after_shift(shift):
-    """班后推送：有话说才推，无事闭嘴。最多一天两条（天然打扰预算）。
+    """班后推送：有话说才推，无事闭嘴。预算闸门在前。
 
-    周日例外：晚班后必推周报摘要——每周一次的存活心跳。
+    周日例外：晚班后必推周报心跳——独立通道，不占预算。
     """
-    import datetime as dt
-
     site = notify.load_env().get(
         "TUPPY_SITE_URL", "https://tuppy.oahubs.com"
     )
     conn = engine.get_db()
+    quota = engine.current_quota(conn)
+    used = engine.pushed_today(conn)
     if shift == "morning":
         n = conn.execute(
             "SELECT COUNT(*) FROM proposals WHERE status='pending'"
         ).fetchone()[0]
         if n:
-            notify.send("Tuppy 早班", f"{n} 件想跟你说", click_url=site)
+            text = f"Tuppy 早班：{n} 件想跟你说"
+            if used >= quota:
+                _budget_silence(
+                    conn, shift,
+                    f"有 {n} 件想跟你说，但今天预算已用完（{used}/{quota}）",
+                )
+            else:
+                notify.send("Tuppy 早班", f"{n} 件想跟你说", click_url=site)
+                _record_push(conn, shift, text)
     else:
         n = conn.execute(
             "SELECT COUNT(*) FROM todos WHERE done=0"
         ).fetchone()[0]
         if n:
-            notify.send(
-                "Tuppy 晚班", f"{n} 件记下的事还没处理", click_url=site + "/todos"
-            )
-        # 周日心跳：本周数字，不管有事没事
+            text = f"Tuppy 晚班：{n} 件记下的事还没处理"
+            if used >= quota:
+                _budget_silence(
+                    conn, shift,
+                    f"有 {n} 件待办还没处理，但今天预算已用完（{used}/{quota}）",
+                )
+            else:
+                notify.send(
+                    "Tuppy 晚班", f"{n} 件记下的事还没处理",
+                    click_url=site + "/todos",
+                )
+                _record_push(conn, shift, text)
+        # 周日心跳：本周数字，独立通道不占预算
         if dt.date.today().weekday() == 6:
             monday = dt.date.today() - dt.timedelta(days=6)
             stats = conn.execute(
@@ -52,6 +89,7 @@ def after_shift(shift):
                 f"这周我说了 {total} 次，你听进去 {kept} 次",
                 click_url=site + "/weekly",
             )
+            _record_push(conn, "weekly", f"周报心跳：说了 {total} 次")
     conn.close()
 
 

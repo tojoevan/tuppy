@@ -793,6 +793,25 @@ def weekly():
             "total": total_w,
             "rate": round(kept_w / total_w * 100) if total_w else None,
         })
+    # 打扰预算段
+    pushes = conn.execute(
+        "SELECT COUNT(*) c FROM push_log WHERE date>=? AND date<=?"
+        " AND shift!='weekly'",
+        (monday.isoformat(), sunday.isoformat()),
+    ).fetchone()["c"]
+    responded = conn.execute(
+        "SELECT COUNT(*) c FROM push_log WHERE date>=? AND date<=?"
+        " AND shift!='weekly' AND responded=1",
+        (monday.isoformat(), sunday.isoformat()),
+    ).fetchone()["c"]
+    over_budget = conn.execute(
+        "SELECT COUNT(*) c FROM shadow WHERE source_type='超预算'"
+        " AND date>=? AND date<=?",
+        (monday.isoformat(), sunday.isoformat()),
+    ).fetchone()["c"]
+    quota = conn.execute(
+        "SELECT quota FROM budget_log ORDER BY id DESC LIMIT 1"
+    ).fetchone()
     conn.close()
     if total and (rejected + expired) / total > 0.4:
         next_line = "下周我少说一点，说准一点。"
@@ -803,6 +822,8 @@ def weekly():
         kept=kept, rejected=rejected, expired=expired,
         changes=changes, shadow_top=shadow_top, undone=undone,
         next_line=next_line, trend=trend,
+        pushes=pushes, responded=responded, over_budget=over_budget,
+        quota=quota["quota"] if quota else 2,
     )
 
 

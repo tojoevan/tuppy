@@ -87,3 +87,23 @@ CREATE TABLE IF NOT EXISTS import_staging (
 CREATE INDEX IF NOT EXISTS idx_proposals_rule ON proposals(rule_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_entries_scan ON entries(domain, category, happened_at);
 CREATE INDEX IF NOT EXISTS idx_shadow_date ON shadow(date);
+
+-- 打扰预算：配额变更记录（当前配额 = 最后一条的 quota）
+CREATE TABLE IF NOT EXISTS budget_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  action TEXT NOT NULL,       -- adjust_down | adjust_up
+  quota INTEGER NOT NULL,     -- 变更后的每日配额
+  reason TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+-- 打扰预算：实际推送记录（responded 由晚班回填）
+CREATE TABLE IF NOT EXISTS push_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  shift TEXT NOT NULL,        -- morning | evening | weekly
+  text TEXT NOT NULL,
+  responded INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);

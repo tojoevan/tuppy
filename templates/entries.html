@@ -44,11 +44,12 @@
 
 {% if recent %}
 <h3 style="margin-top:28px">最近记的</h3>
+<div class="table-wrap">
 <table>
 <tr><th>日期</th><th>域</th><th>分类</th><th>人</th><th>标题/值</th><th></th></tr>
 {% for r in recent %}
 <tr>
-  <td>{{ r.happened_at[:16] }}{% if r.ended_at %} → {{ r.ended_at[:16] }}{% endif %}</td>
+  <td class="time-col">{{ r.happened_at[:16] }}{% if r.ended_at %} → {{ r.ended_at[:16] }}{% endif %}</td>
   <td>{{ r.domain }}</td>
   <td>{{ r.category }}</td>
   <td>{{ r.person }}</td>
@@ -63,5 +64,6 @@
 </tr>
 {% endfor %}
 </table>
+</div>
 {% endif %}
 {% endblock %}

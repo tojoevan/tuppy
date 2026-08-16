@@ -31,9 +31,11 @@ nav a.active{font-weight:bold;color:#222;border-bottom:2px solid #222}
 form label{display:block;margin:8px 0 2px;font-size:.9em;color:#555}
 input,select,textarea{border:1px solid #ccc;border-radius:6px;
      padding:6px 8px;font-size:.95em;font-family:inherit;max-width:100%}
-table{border-collapse:collapse;width:100%}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;min-width:420px}
 td,th{border-bottom:1px solid #eee;padding:6px 8px;text-align:left;
-      font-size:.92em}
+      font-size:.92em;white-space:nowrap}
+td.time-col{white-space:normal;min-width:110px}
 </style>
 </head>
 <body>

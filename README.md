@@ -44,6 +44,12 @@ v0.1 开发中。
 - 输出：提议页 + 待办 + 影子报告 + 周报
 - 技术栈：Python + Flask + SQLite + cron
 
+## 规则集
+
+`seed.sql` 是**生成物**，由 `scripts/sync_rules.py` 从 [tuppy-rules](https://github.com/tojoevan/tuppy-rules) 仓库的 `rules.json` 生成。
+
+改规则流程：改 tuppy-rules → `python scripts/sync_rules.py` → 提交 Tuppy。
+
 ## 路线图
 
 ```

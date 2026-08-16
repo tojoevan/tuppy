@@ -10,7 +10,8 @@
 {% else %}
 <div class="proposal">
   这周我说了 {{ total }} 次：<br>
-  你听进去 {{ kept }} 次，{{ expired }} 次没理我，{{ rejected }} 次说不用。
+  你听进去 {{ kept }} 次，{{ expired }} 次没理我，{{ rejected }} 次说不用。<br>
+  <span class="muted">这周你录了 {{ voice_entries }} 条，其中 {{ voice_count }} 条是语音说的</span>
 </div>
 {% endif %}
 {% if changes %}

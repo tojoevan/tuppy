@@ -788,6 +788,17 @@ def weekly():
     kept = counts.get("kept", 0)
     rejected = counts.get("rejected", 0)
     expired = counts.get("expired", 0)
+    # 语音录入占比：判断语音是否真降低了录入摩擦
+    voice_count = conn.execute(
+        "SELECT COUNT(*) c FROM entries WHERE source='voice'"
+        " AND date(created_at)>=? AND date(created_at)<=?",
+        (monday.isoformat(), sunday.isoformat()),
+    ).fetchone()["c"]
+    entries_count = conn.execute(
+        "SELECT COUNT(*) c FROM entries WHERE date(created_at)>=?"
+        " AND date(created_at)<=?",
+        (monday.isoformat(), sunday.isoformat()),
+    ).fetchone()["c"]
     changes = conn.execute(
         "SELECT l.*, r.domain, r.category, r.template FROM rule_log l"
         " JOIN rules r ON r.id=l.rule_id WHERE l.created_at >= ?"
@@ -854,6 +865,7 @@ def weekly():
         next_line=next_line, trend=trend,
         pushes=pushes, responded=responded, over_budget=over_budget,
         quota=quota["quota"] if quota else 2,
+        voice_count=voice_count, voice_entries=entries_count,
     )
 
 

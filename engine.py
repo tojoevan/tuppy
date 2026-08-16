@@ -510,9 +510,10 @@ def run_shift(shift):
         for i, h in enumerate(ordered):
             if i < PROPOSAL_LIMIT:
                 conn.execute(
-                    "INSERT INTO proposals (rule_id, text, status, shift)"
-                    " VALUES (?,?,?,?)",
-                    (h["rule_id"], h["text"], "pending", shift),
+                    "INSERT INTO proposals (rule_id, entry_id, text, status,"
+                    " shift) VALUES (?,?,?,?,?)",
+                    (h["rule_id"], h.get("entry_id"), h["text"],
+                     "pending", shift),
                 )
                 if h.get("entry_id"):
                     conn.execute(

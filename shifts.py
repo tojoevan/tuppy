@@ -60,7 +60,25 @@ def after_shift(shift):
         n = conn.execute(
             "SELECT COUNT(*) FROM todos WHERE done=0"
         ).fetchone()[0]
-        if n:
+        overdue = conn.execute(
+            "SELECT COUNT(*) FROM todos WHERE done=0 AND due IS NOT NULL"
+            " AND due <= ?",
+            (engine.today().isoformat(),),
+        ).fetchone()[0]
+        if overdue:
+            text = f"Tuppy 晚班：{overdue} 件待办到期了还没处理"
+            if used >= quota:
+                _budget_silence(
+                    conn, shift,
+                    f"{overdue} 件待办到期了，但今天预算已用完（{used}/{quota}）",
+                )
+            else:
+                notify.send(
+                    "Tuppy 晚班", f"{overdue} 件待办到期了还没处理",
+                    click_url=site + "/todos",
+                )
+                _record_push(conn, shift, text)
+        elif n:
             text = f"Tuppy 晚班：{n} 件记下的事还没处理"
             if used >= quota:
                 _budget_silence(

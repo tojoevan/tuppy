@@ -5,6 +5,9 @@
 {% for t in open_todos %}
 <div class="proposal">
   <div>□ {{ t.text }}</div>
+  {% if t.due %}
+  <div class="muted">截止 {{ t.due }}{% if t.due <= today %}<span style="color:#a33"> · 已到期</span>{% endif %}</div>
+  {% endif %}
   <form method="post" action="/todo/{{ t.id }}/done" style="margin-top:6px">
     <button class="btn">做完了</button>
   </form>

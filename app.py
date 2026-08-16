@@ -197,13 +197,21 @@ def keep(pid):
     conn = engine.get_db()
     p = conn.execute("SELECT * FROM proposals WHERE id=?", (pid,)).fetchone()
     if p and p["status"] == "pending":
+        # 到期类提议：从关联 entry 取截止日
+        due = None
+        if p["entry_id"]:
+            e = conn.execute(
+                "SELECT happened_at FROM entries WHERE id=?", (p["entry_id"],)
+            ).fetchone()
+            if e:
+                due = e["happened_at"][:10]
         conn.execute(
             "UPDATE proposals SET status='kept',"
             " resolved_at=datetime('now','localtime') WHERE id=?", (pid,),
         )
         conn.execute(
-            "INSERT INTO todos (proposal_id, text) VALUES (?,?)",
-            (pid, p["text"]),
+            "INSERT INTO todos (proposal_id, text, due) VALUES (?,?,?)",
+            (pid, p["text"], due),
         )
         conn.commit()
         flash("好，记在待办里了。")
@@ -237,7 +245,8 @@ def todos():
     ).fetchall()
     conn.close()
     return render_template(
-        "todos.html", open_todos=open_todos, done_todos=done_todos
+        "todos.html", open_todos=open_todos, done_todos=done_todos,
+        today=dt.date.today().isoformat(),
     )
 
 

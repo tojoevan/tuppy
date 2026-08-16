@@ -49,6 +49,12 @@ cron 22:00 晚班 → 反馈降权 + 影子报告 + 备份 → 有待办则推�
 
 推送链路：Tuppy POST → ntfy（127.0.0.1:2586）→ 手机 app。无事不推。iOS 唤醒走 ntfy.sh 中转（仅信号）。
 
+MQTT 链路：Tuppy 班后 mosquitto_pub → 1883 → mosquitto → 1884(ws) → nginx /mqtt → wss → ESP32 固件（状态屏显）。
+
+## 案例文档
+
+定位/排障案例在 [docs/cases/](cases/)（按日期命名）。
+
 ## 规则生态
 
 - 规则单一事实源：tuppy-rules 仓库 `rules.json`（格式标准 + 15 条规则 + 数据源地图）

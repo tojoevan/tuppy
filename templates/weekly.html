@@ -37,5 +37,18 @@
 <div class="proposal">□ {{ t.text }}</div>
 {% endfor %}
 {% endif %}
+<h3>这阵子的准头</h3>
+<div class="table-wrap">
+<table>
+<tr><th>周</th><th>说了</th><th>命中率</th></tr>
+{% for w in trend %}
+<tr>
+  <td>{{ w.label }}</td>
+  <td>{{ w.total }}</td>
+  <td>{% if w.rate is not none %}{{ w.rate }}%{% else %}—{% endif %}</td>
+</tr>
+{% endfor %}
+</table>
+</div>
 <p class="muted">{{ next_line }}</p>
 {% endblock %}

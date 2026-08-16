@@ -534,17 +534,46 @@ STATUS_CN = {"propose": "提议", "observe": "观察", "archive": "归档"}
 def rules_page():
     conn = engine.get_db()
     rules = conn.execute("SELECT * FROM rules ORDER BY status, id").fetchall()
+    rates = rule_hit_rate(conn)
     conn.close()
     return render_template(
-        "rules.html", rules=rules,
+        "rules.html", rules=rules, rates=rates,
         template_cn=TEMPLATE_CN, status_cn=STATUS_CN,
     )
+
+
+@app.route("/rule/<int:rid>/delete", methods=["POST"])
+def rule_delete(rid):
+    conn = engine.get_db()
+    conn.execute("DELETE FROM rules WHERE id=?", (rid,))
+    conn.commit()
+    conn.close()
+    flash("规则删掉了。")
+    return redirect(url_for("rules_page"))
 
 
 # ---------- 规则导入/导出 ----------
 
 VALID_TEMPLATES = ("gap", "overlap", "surge", "expiry")
 VALID_KINDS = ("habit", "detection")
+
+
+def rule_hit_rate(conn):
+    """每条规则的历史命中率：kept/(kept+rejected+expired)。样本<5 返回 None。"""
+    out = {}
+    rows = conn.execute(
+        "SELECT rule_id, status, COUNT(*) c FROM proposals"
+        " WHERE status IN ('kept','rejected','expired')"
+        " GROUP BY rule_id, status"
+    ).fetchall()
+    agg = {}
+    for r in rows:
+        agg.setdefault(r["rule_id"], {})[r["status"]] = r["c"]
+    for rule_id, counts in agg.items():
+        kept = counts.get("kept", 0)
+        total = kept + counts.get("rejected", 0) + counts.get("expired", 0)
+        out[rule_id] = round(kept / total, 2) if total >= 5 else None
+    return out
 
 
 def _rules_export(conn):
@@ -730,6 +759,25 @@ def weekly():
     undone = conn.execute(
         "SELECT * FROM todos WHERE done=0 ORDER BY id DESC"
     ).fetchall()
+    # 最近 8 周命中率趋势（信任面板 v0.1）
+    trend = []
+    for wk in range(7, -1, -1):
+        wk_start = monday - dt.timedelta(weeks=wk)
+        wk_end = wk_start + dt.timedelta(days=7)
+        s = conn.execute(
+            "SELECT status, COUNT(*) c FROM proposals WHERE created_at >= ?"
+            " AND created_at < ? AND status IN ('kept','rejected','expired')"
+            " GROUP BY status",
+            (wk_start.isoformat(), wk_end.isoformat()),
+        ).fetchall()
+        counts = {x["status"]: x["c"] for x in s}
+        kept_w = counts.get("kept", 0)
+        total_w = kept_w + counts.get("rejected", 0) + counts.get("expired", 0)
+        trend.append({
+            "label": wk_start.strftime("%m-%d"),
+            "total": total_w,
+            "rate": round(kept_w / total_w * 100) if total_w else None,
+        })
     conn.close()
     if total and (rejected + expired) / total > 0.4:
         next_line = "下周我少说一点，说准一点。"
@@ -739,7 +787,7 @@ def weekly():
         "weekly.html", monday=monday, sunday=sunday, total=total,
         kept=kept, rejected=rejected, expired=expired,
         changes=changes, shadow_top=shadow_top, undone=undone,
-        next_line=next_line,
+        next_line=next_line, trend=trend,
     )
 
 

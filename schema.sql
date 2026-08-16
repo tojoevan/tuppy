@@ -82,3 +82,8 @@ CREATE TABLE IF NOT EXISTS import_staging (
   valid INTEGER NOT NULL DEFAULT 1,
   reason TEXT
 );
+
+-- 索引：查询热路径（周报聚合、规则扫描、命中率）
+CREATE INDEX IF NOT EXISTS idx_proposals_rule ON proposals(rule_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_entries_scan ON entries(domain, category, happened_at);
+CREATE INDEX IF NOT EXISTS idx_shadow_date ON shadow(date);

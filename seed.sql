@@ -16,4 +16,5 @@ INSERT INTO rules (kind, domain, category, template, params, priority) VALUES
 ('detection', '车辆', '年检', 'expiry', '{"days_before": 14, "recurring": true, "period_days": 365}', 4),
 ('detection', '宠物', '驱虫', 'expiry', '{"days_before": 3, "recurring": true, "period_days": 30}', 4),
 ('habit', '健康', '体重', 'gap', '{"frequency": "weekly", "max_gap": 1}', 4),
-('habit', '健康', '吃药', 'gap', '{"frequency": "daily", "max_gap": 1}', 5);
+('habit', '健康', '吃药', 'gap', '{"frequency": "daily", "max_gap": 1}', 5),
+('habit', '健康', '胰岛素', 'gap', '{"frequency": "weekly", "max_gap": 1}', 5);

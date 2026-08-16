@@ -167,8 +167,10 @@ def static_files(filename):
 def index():
     conn = engine.get_db()
     proposals = conn.execute(
-        "SELECT p.*, r.domain, r.category FROM proposals p"
+        "SELECT p.*, r.domain, r.category, e.happened_at AS due_at"
+        " FROM proposals p"
         " JOIN rules r ON r.id=p.rule_id"
+        " LEFT JOIN entries e ON e.id=p.entry_id"
         " WHERE p.status IN ('pending','kept')"
         " AND date(p.created_at)=date('now','localtime')"
         " ORDER BY p.id DESC",
@@ -237,15 +239,21 @@ def reject(pid):
 @app.route("/todos")
 def todos():
     conn = engine.get_db()
+    offset = max(0, request.args.get("offset", 0, type=int))
     open_todos = conn.execute(
         "SELECT * FROM todos WHERE done=0 ORDER BY id DESC"
     ).fetchall()
     done_todos = conn.execute(
-        "SELECT * FROM todos WHERE done=1 ORDER BY done_at DESC LIMIT 10"
+        "SELECT * FROM todos WHERE done=1 ORDER BY done_at DESC"
+        " LIMIT 10 OFFSET ?", (offset,),
     ).fetchall()
+    done_total = conn.execute(
+        "SELECT COUNT(*) c FROM todos WHERE done=1"
+    ).fetchone()["c"]
     conn.close()
     return render_template(
         "todos.html", open_todos=open_todos, done_todos=done_todos,
+        done_total=done_total, offset=offset,
         today=dt.date.today().isoformat(),
     )
 
@@ -267,15 +275,28 @@ def todo_done(tid):
 def entries():
     conn = engine.get_db()
     offset = max(0, request.args.get("offset", 0, type=int))
+    domain_filter = request.args.get("domain", "").strip()
+    where, args = "", []
+    if domain_filter:
+        where = " WHERE domain=?"
+        args.append(domain_filter)
     recent = conn.execute(
-        "SELECT * FROM entries ORDER BY id DESC LIMIT 10 OFFSET ?",
-        (offset,),
+        f"SELECT * FROM entries{where} ORDER BY id DESC LIMIT 10 OFFSET ?",
+        args + [offset],
     ).fetchall()
-    total = conn.execute("SELECT COUNT(*) c FROM entries").fetchone()["c"]
+    total = conn.execute(
+        f"SELECT COUNT(*) c FROM entries{where}", args
+    ).fetchone()["c"]
+    all_domains = [
+        r["domain"] for r in conn.execute(
+            "SELECT DISTINCT domain FROM entries ORDER BY domain"
+        )
+    ]
     conn.close()
     return render_template(
         "entries.html", recent=recent, total=total, offset=offset,
-        domains=SEED_DOMAINS,
+        domains=SEED_DOMAINS, domain_filter=domain_filter,
+        all_domains=all_domains,
     )
 
 

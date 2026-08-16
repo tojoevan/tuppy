@@ -14,7 +14,7 @@
     </form>
   </div>
   {% else %}
-  <div class="muted" style="margin-top:4px">已记下 ✓</div>
+  <div class="muted" style="margin-top:4px">已记下 ✓{% if p.due_at %} · 截止 {{ p.due_at[:10] }}{% endif %}</div>
   {% endif %}
   <div class="muted">{{ p.domain }}{% if p.category %} · {{ p.category }}{% endif %} · {{ '早班' if p.shift == 'morning' else '晚班' }}</div>
 </div>

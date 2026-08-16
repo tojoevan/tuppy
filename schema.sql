@@ -90,6 +90,12 @@ CREATE INDEX IF NOT EXISTS idx_proposals_rule ON proposals(rule_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_entries_scan ON entries(domain, category, happened_at);
 CREATE INDEX IF NOT EXISTS idx_shadow_date ON shadow(date);
 
+-- 迁移版本记录（migrations.py 按此推进存量库）
+CREATE TABLE IF NOT EXISTS schema_version (
+  name TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
 -- 打扰预算：配额变更记录（当前配额 = 最后一条的 quota）
 CREATE TABLE IF NOT EXISTS budget_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

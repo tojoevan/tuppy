@@ -17,9 +17,15 @@
 <p>待办是空的。点提议里的"记下"，就会出现在这里。</p>
 {% endif %}
 {% if done_todos %}
-<h3 style="margin-top:24px">最近归档的</h3>
+<h3 style="margin-top:24px">最近归档的（共 {{ done_total }}）</h3>
 {% for t in done_todos %}
 <div class="muted">✓ {{ t.text }}</div>
 {% endfor %}
+{% if offset + 10 < done_total %}
+<p><a class="btn" href="/todos?offset={{ offset + 10 }}">更早的</a></p>
+{% endif %}
+{% if offset > 0 %}
+<p><a class="btn" href="/todos?offset={{ [offset - 10, 0]|max }}">更新的</a></p>
+{% endif %}
 {% endif %}
 {% endblock %}

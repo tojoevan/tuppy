@@ -43,7 +43,15 @@
 </form>
 
 {% if recent %}
-<h3 style="margin-top:28px">记的（共 {{ total }} 条）</h3>
+<h3 style="margin-top:28px">记的（共 {{ total }} 条）{% if domain_filter %} · 只看 {{ domain_filter }}{% endif %}</h3>
+{% if all_domains %}
+<p class="muted">
+  {% for d in all_domains %}
+  <a href="/entries?domain={{ d }}" style="margin-right:8px">{{ d }}</a>
+  {% endfor %}
+  {% if domain_filter %}<a href="/entries">全部</a>{% endif %}
+</p>
+{% endif %}
 <div class="table-wrap">
 <table>
 <tr><th>日期</th><th>域</th><th>分类</th><th>人</th><th>标题/值</th><th></th></tr>
@@ -66,10 +74,10 @@
 </table>
 </div>
 {% if offset + 10 < total %}
-<p><a class="btn" href="/entries?offset={{ offset + 10 }}">更早的</a></p>
+<p><a class="btn" href="/entries?offset={{ offset + 10 }}{% if domain_filter %}&domain={{ domain_filter }}{% endif %}">更早的</a></p>
 {% endif %}
 {% if offset > 0 %}
-<p><a class="btn" href="/entries?offset={{ [offset - 10, 0]|max }}">更新的</a></p>
+<p><a class="btn" href="/entries?offset={{ [offset - 10, 0]|max }}{% if domain_filter %}&domain={{ domain_filter }}{% endif %}">更新的</a></p>
 {% endif %}
 <p class="muted" style="margin-top:16px"><a href="/export">下载全部数据（SQLite）</a> —— 数据是文件，归你。</p>
 {% endif %}

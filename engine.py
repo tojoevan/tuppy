@@ -35,7 +35,9 @@ def get_db():
 
 
 def init_db():
-    """建库 + 首建时播种种子规则。幂等。"""
+    """建库 + 首建时播种种子规则 + 跑未应用迁移。幂等。"""
+    import migrations
+
     conn = get_db()
     existed = conn.execute(
         "SELECT name FROM sqlite_master WHERE name='rules'"
@@ -44,6 +46,7 @@ def init_db():
     if not existed:
         conn.executescript((BASE / "seed.sql").read_text())
     conn.commit()
+    migrations.migrate(conn)
     conn.close()
 
 

@@ -71,7 +71,14 @@ def test_static_reachable_without_login(client):
 
 
 def test_deploy_button_writes_trigger(tmp_path, monkeypatch, client):
+    client.post("/login", data={"password": "secret-pw"})
     monkeypatch.setattr(engine, "BASE", tmp_path)
     r = client.post("/deploy")
     assert r.status_code == 302
     assert (tmp_path / ".deploy-trigger").exists()
+
+
+def test_deploy_requires_login(client):
+    r = client.post("/deploy")
+    assert r.status_code == 302
+    assert "/login" in r.headers["Location"]

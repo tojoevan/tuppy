@@ -12,6 +12,7 @@ import datetime as dt
 import os
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 import engine
 
@@ -35,7 +36,16 @@ _load_dotenv()
 # 小智 MCP 配置支持 headers，填这个 token。
 TOKEN = os.environ.get("TUPPY_MCP_TOKEN", "")
 
-mcp = FastMCP("tuppy", host="127.0.0.1", port=8322)
+# 反代场景：公网 Host（tuppy-mcp.oahubs.com）必须放行，否则 421
+_transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=False,
+    allowed_hosts=["tuppy-mcp.oahubs.com:*", "127.0.0.1:*", "localhost:*"],
+    allowed_origins=[],
+)
+mcp = FastMCP(
+    "tuppy", host="127.0.0.1", port=8322,
+    transport_security=_transport_security,
+)
 
 
 def _db():

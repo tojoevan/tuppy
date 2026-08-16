@@ -35,7 +35,7 @@ _load_dotenv()
 # 小智 MCP 配置支持 headers，填这个 token。
 TOKEN = os.environ.get("TUPPY_MCP_TOKEN", "")
 
-mcp = FastMCP("tuppy")
+mcp = FastMCP("tuppy", host="127.0.0.1", port=8322)
 
 
 def _db():
@@ -191,4 +191,4 @@ def weekly_stats() -> str:
 
 if __name__ == "__main__":
     # 127.0.0.1 监听，公网走宝塔反代。streamable-http 生产推荐。
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=8322)
+    mcp.run(transport="streamable-http")

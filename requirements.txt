@@ -2,3 +2,5 @@ flask
 icalendar
 pytest
 mcp
+websockets
+python-dotenv

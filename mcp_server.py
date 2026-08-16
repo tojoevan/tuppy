@@ -12,7 +12,6 @@ import datetime as dt
 import os
 
 from mcp.server.fastmcp import FastMCP
-from mcp.server.transport_security import TransportSecuritySettings
 
 import engine
 
@@ -31,21 +30,9 @@ def _load_dotenv():
 
 _load_dotenv()
 
-# 鉴权在 nginx/宝塔反代层：校验 Authorization: Bearer <TUPPY_MCP_TOKEN>。
-# SDK 内置 auth 与 OAuth 强耦合，纯 Bearer 校验不值得引入 OAuth 全家桶。
-# 小智 MCP 配置支持 headers，填这个 token。
-TOKEN = os.environ.get("TUPPY_MCP_TOKEN", "")
-
-# 反代场景：公网 Host（tuppy-mcp.oahubs.com）必须放行，否则 421
-_transport_security = TransportSecuritySettings(
-    enable_dns_rebinding_protection=False,
-    allowed_hosts=["tuppy-mcp.oahubs.com:*", "127.0.0.1:*", "localhost:*"],
-    allowed_origins=[],
-)
-mcp = FastMCP(
-    "tuppy", host="127.0.0.1", port=8322,
-    transport_security=_transport_security,
-)
+# 运行方式：stdio 子进程，由 scripts/mcp_pipe.py 桥接到小智官方 MCP 接入点。
+# 鉴权由接入点 token 处理（MCP_ENDPOINT 里带），本服务不出网、不监听。
+mcp = FastMCP("tuppy")
 
 
 def _db():
@@ -200,5 +187,5 @@ def weekly_stats() -> str:
 
 
 if __name__ == "__main__":
-    # 127.0.0.1 监听，公网走宝塔反代。streamable-http 生产推荐。
-    mcp.run(transport="streamable-http")
+    # stdio 模式：由 mcp_pipe.py spawn 并桥接到官方接入点
+    mcp.run(transport="stdio")

@@ -125,6 +125,15 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 - 改规则流程：改 tuppy-rules → sync → 提交 Tuppy → 部署
 - 生产库不受 seed 影响（seed 仅建库时播种），老库规则更新走规则页导入
 
+## MCP 服务部署（2026-08-16）
+
+- `tuppy-mcp.service`：systemd User=www，127.0.0.1:8322，streamable-http
+- **mcp 依赖必须锁 1.27.0**：2.0.0 移除了 `mcp.server.fastmcp` 模块（本机 1.27.0 验证过）
+- pip 装依赖用 `sudo -u www -H`（-H 设 HOME，否则 --user 装到 ubuntu/.local，systemd 下 www 找不到）
+- 鉴权：.env `TUPPY_MCP_TOKEN`（16 hex）。SDK 内置 auth 与 OAuth 强耦合弃用，Bearer 校验放反代层
+- VPS 验证：完整握手（initialize → tools/list → call_tool）通，5 工具
+- 待用户配置：宝塔反代 /mcp → 127.0.0.1:8322（nginx 校验 Authorization header）+ 智控台自定义 MCP
+
 ## 版本记录
 
 见 CHANGELOG.md。

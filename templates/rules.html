@@ -16,4 +16,18 @@
 </table>
 </div>
 <p class="muted">规则状态：提议 = 开口，观察 = 只记不说（被降权），归档 = 沉睡。降权原因在周报"我学到的"。</p>
+
+<h3 style="margin-top:24px">规则搬家</h3>
+<p>
+  <a class="btn" href="/rules/export">导出（下载 JSON）</a>
+</p>
+<p class="muted">规则集独立格式：<a href="https://github.com/tojoevan/tuppy-rules" target="_blank">tuppy-rules</a>。贴 JSON 或传文件导入：</p>
+<form method="post" action="/rules/import" enctype="multipart/form-data">
+  <textarea name="json" rows="5" placeholder='{"rules":[...]}' style="width:100%;box-sizing:border-box;border:1px solid #ccc;border-radius:6px;padding:8px;font-family:monospace;font-size:.85em"></textarea>
+  <div style="margin-top:8px">
+    <input type="file" name="file" accept=".json">
+    <button class="btn primary" style="margin-top:6px">导入</button>
+  </div>
+</form>
+<p class="muted">同（域, 分类, 模板）已存在的规则跳过，非法规则拒绝，其余新增。</p>
 {% endblock %}

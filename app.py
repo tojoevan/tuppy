@@ -541,6 +541,115 @@ def rules_page():
     )
 
 
+# ---------- 规则导入/导出 ----------
+
+VALID_TEMPLATES = ("gap", "overlap", "surge", "expiry")
+VALID_KINDS = ("habit", "detection")
+
+
+def _rules_export(conn):
+    rules = conn.execute(
+        "SELECT kind, domain, category, template, params, priority"
+        " FROM rules ORDER BY id"
+    ).fetchall()
+    return {
+        "format": "tuppy-rules",
+        "version": 1,
+        "exported_at": dt.date.today().isoformat(),
+        "rules": [
+            {
+                "kind": r["kind"],
+                "domain": r["domain"],
+                "category": r["category"],
+                "template": r["template"],
+                "params": json.loads(r["params"] or "{}"),
+                "priority": r["priority"],
+            }
+            for r in rules
+        ],
+    }
+
+
+def _rules_import(conn, rules):
+    """导入规则。返回 (inserted, skipped, rejected)。"""
+    inserted = skipped = rejected = 0
+    for r in rules:
+        kind = r.get("kind")
+        template = r.get("template")
+        params = r.get("params", {})
+        if kind not in VALID_KINDS or template not in VALID_TEMPLATES:
+            rejected += 1
+            continue
+        if not isinstance(params, dict):
+            rejected += 1
+            continue
+        exists = conn.execute(
+            "SELECT id FROM rules WHERE domain=? AND category=?"
+            " AND template=?",
+            (r.get("domain", ""), r.get("category", ""), template),
+        ).fetchone()
+        if exists:
+            skipped += 1
+            continue
+        conn.execute(
+            "INSERT INTO rules (kind, domain, category, template, params,"
+            " priority) VALUES (?,?,?,?,?,?)",
+            (
+                kind,
+                r.get("domain", ""),
+                r.get("category", ""),
+                template,
+                json.dumps(params, ensure_ascii=False),
+                int(r.get("priority", 5)),
+            ),
+        )
+        inserted += 1
+    return inserted, skipped, rejected
+
+
+@app.route("/rules/export")
+def rules_export():
+    conn = engine.get_db()
+    payload = _rules_export(conn)
+    conn.close()
+    resp = app.response_class(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        mimetype="application/json",
+    )
+    resp.headers["Content-Disposition"] = (
+        "attachment; filename=tuppy-rules.json"
+    )
+    return resp
+
+
+@app.route("/rules/import", methods=["POST"])
+def rules_import():
+    payload = None
+    if request.form.get("json"):
+        try:
+            payload = json.loads(request.form["json"])
+        except json.JSONDecodeError:
+            flash("导入失败：JSON 解析不了。")
+            return redirect(url_for("rules_page"))
+    else:
+        file = request.files.get("file")
+        if file:
+            try:
+                payload = json.loads(file.read())
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                flash("导入失败：JSON 解析不了。")
+                return redirect(url_for("rules_page"))
+    if not payload or not isinstance(payload.get("rules"), list):
+        flash("导入失败：格式不对，需要 {\"rules\": [...]}")
+        return redirect(url_for("rules_page"))
+    conn = engine.get_db()
+    inserted, skipped, rejected = _rules_import(conn, payload["rules"])
+    conn.commit()
+    conn.close()
+    flash(f"导入完成：{inserted} 条新增，{skipped} 条已存在跳过，{rejected} 条拒绝。")
+    return redirect(url_for("rules_page"))
+
+
 # ---------- 影子报告 ----------
 
 @app.route("/shadow")

@@ -127,12 +127,15 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 
 ## MCP 服务部署（2026-08-16）
 
-- `tuppy-mcp.service`：systemd User=www，127.0.0.1:8322，streamable-http
-- **mcp 依赖必须锁 1.27.0**：2.0.0 移除了 `mcp.server.fastmcp` 模块（本机 1.27.0 验证过）
-- pip 装依赖用 `sudo -u www -H`（-H 设 HOME，否则 --user 装到 ubuntu/.local，systemd 下 www 找不到）
-- 鉴权：.env `TUPPY_MCP_TOKEN`（16 hex）。SDK 内置 auth 与 OAuth 强耦合弃用，Bearer 校验放反代层
-- VPS 验证：完整握手（initialize → tools/list → call_tool）通，5 工具
-- 待用户配置：宝塔反代 /mcp → 127.0.0.1:8322（nginx 校验 Authorization header）+ 智控台自定义 MCP
+**架构（最终形态）**：stdio 桥接，出站连接官方接入点，无公网暴露
+
+- 官方接入方式：小智要求对接 `wss://api.xiaozhi.me/mcp/?token=xxx`——**服务出站连官方 MCP 接入点**，不是官方连你的 URL
+- `scripts/mcp_pipe.py`：官方桥接脚本（来源 78/mcp-calculator，无 LICENSE，头注释注明）。stdio ↔ WebSocket 双向转发 + 指数退避重连
+- `mcp_server.py`：FastMCP stdio 模式，5 工具。mcp 依赖锁 1.27.0（2.0.0 移除 fastmcp 模块）
+- `tuppy-mcp.service`：User=www，`ExecStart=python scripts/mcp_pipe.py mcp_server.py`。MCP_ENDPOINT 在 .env（pipe 自带 load_dotenv）
+- 智控台"刷新 MCP 接入状态"显示在线 = 链路通
+- **废弃路径**：streamable-http + tuppy-mcp.oahubs.com 反代（421 Host 校验问题修过但整体方案被官方接入点替代）。域名可删
+- 踩坑：pip 装依赖用 `sudo -u www -H`（否则 --user 装到错误 HOME）
 
 ## 版本记录
 

@@ -113,6 +113,18 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 - `/static/` 免鉴权（PWA 图标/清单），其余全锁，未登录 302 到 /login
 - 宝塔面板的 Basic Auth（目录保护）需用户手动关闭，否则双层锁
 
+## 页面更新按钮（2026-08-16）
+
+- 页面 header"更新"按钮 POST /deploy → www 写 `.deploy-trigger` → root cron 每分钟捡信跑部署脚本
+- 零权限扩张：www 只写文件，root 执行。未登录 302 拦截
+- 部署后 push 流程：`git push` → SSH 跑 `/usr/local/bin/tuppy-deploy.sh`（比按钮更快）
+
+## 规则同步（2026-08-16）
+
+- seed.sql 是生成物：`python scripts/sync_rules.py` 从 ../tuppy-rules/rules.json 生成
+- 改规则流程：改 tuppy-rules → sync → 提交 Tuppy → 部署
+- 生产库不受 seed 影响（seed 仅建库时播种），老库规则更新走规则页导入
+
 ## 版本记录
 
 见 CHANGELOG.md。

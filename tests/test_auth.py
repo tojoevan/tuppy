@@ -44,10 +44,17 @@ def test_correct_password_login_and_pages(client):
     r = client.post("/login", data={"password": "secret-pw"})
     assert r.status_code == 302
     assert "/login" not in r.headers["Location"]
-    for path in ("/", "/todos", "/entries", "/shadow", "/weekly",
+    for path in ("/", "/todos", "/entries", "/shadow", "/weekly", "/rules",
                  "/static/manifest.json"):
         r = client.get(path)
         assert r.status_code == 200, f"{path} 应 200, got {r.status_code}"
+
+
+def test_rules_page_lists_rules(client):
+    client.post("/login", data={"password": "secret-pw"})
+    r = client.get("/rules")
+    html = r.get_data(as_text=True)
+    assert "日程" in html and "冲突" in html
 
 
 def test_logout(client):

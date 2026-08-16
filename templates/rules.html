@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<p>它在按这些规则看你的数据。没数据的规则安静躺着，录到什么活什么。</p>
+<div class="table-wrap">
+<table>
+<tr><th>域</th><th>分类</th><th>看什么</th><th>参数</th><th>状态</th></tr>
+{% for r in rules %}
+<tr>
+  <td>{{ r.domain }}</td>
+  <td>{{ r.category or '全部' }}</td>
+  <td>{{ template_cn.get(r.template, r.template) }}</td>
+  <td style="font-size:.8em;color:#666">{{ r.params }}</td>
+  <td>{{ status_cn.get(r.status, r.status) }}</td>
+</tr>
+{% endfor %}
+</table>
+</div>
+<p class="muted">规则状态：提议 = 开口，观察 = 只记不说（被降权），归档 = 沉睡。降权原因在周报"我学到的"。</p>
+{% endblock %}

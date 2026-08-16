@@ -508,6 +508,24 @@ def import_confirm():
     return redirect(url_for("entries"))
 
 
+# ---------- 规则浏览 ----------
+
+TEMPLATE_CN = {"gap": "缺测", "overlap": "冲突",
+               "surge": "突变", "expiry": "到期"}
+STATUS_CN = {"propose": "提议", "observe": "观察", "archive": "归档"}
+
+
+@app.route("/rules")
+def rules_page():
+    conn = engine.get_db()
+    rules = conn.execute("SELECT * FROM rules ORDER BY status, id").fetchall()
+    conn.close()
+    return render_template(
+        "rules.html", rules=rules,
+        template_cn=TEMPLATE_CN, status_cn=STATUS_CN,
+    )
+
+
 # ---------- 影子报告 ----------
 
 @app.route("/shadow")

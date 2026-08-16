@@ -44,28 +44,41 @@ def rule(db, template):
     ).fetchone()
 
 
+def gap_rule(db, category="血压"):
+    """gap 测试自插 daily 规则，不依赖 seed 内容。"""
+    db.execute(
+        "INSERT INTO rules (kind, domain, category, template, params)"
+        " VALUES ('habit','健康',?,'gap','{\"frequency\":\"daily\",\"max_gap\":1}')",
+        (category,),
+    )
+    db.commit()
+    return db.execute(
+        "SELECT * FROM rules WHERE category=? AND template='gap'", (category,)
+    ).fetchone()
+
+
 # ---------- 模板 1：缺测 gap ----------
 
 def test_gap_morning_triggers_when_yesterday_missed(db):
     add_entry(db, "健康", "血压", "妈", "2026-08-13 08:00")
-    hits = engine.scan_gap(db, rule(db, "gap"), {"frequency": "daily", "max_gap": 1}, "morning")
+    hits = engine.scan_gap(db, gap_rule(db), {"frequency": "daily", "max_gap": 1}, "morning")
     assert hits and "1 天没记" in hits["text"]
 
 
 def test_gap_morning_silent_when_recorded_yesterday(db):
     add_entry(db, "健康", "血压", "妈", "2026-08-14 08:00")
-    assert engine.scan_gap(db, rule(db, "gap"), {"frequency": "daily", "max_gap": 1}, "morning") is None
+    assert engine.scan_gap(db, gap_rule(db), {"frequency": "daily", "max_gap": 1}, "morning") is None
 
 
 def test_gap_evening_triggers_two_days_missed(db):
     add_entry(db, "健康", "血压", "妈", "2026-08-13 08:00")
-    hits = engine.scan_gap(db, rule(db, "gap"), {"frequency": "daily", "max_gap": 1}, "evening")
+    hits = engine.scan_gap(db, gap_rule(db), {"frequency": "daily", "max_gap": 1}, "evening")
     assert hits and "连续 2 天" in hits["text"]
 
 
 def test_gap_evening_silent_for_single_missed_day(db):
     add_entry(db, "健康", "血压", "妈", "2026-08-14 08:00")
-    assert engine.scan_gap(db, rule(db, "gap"), {"frequency": "daily", "max_gap": 1}, "evening") is None
+    assert engine.scan_gap(db, gap_rule(db), {"frequency": "daily", "max_gap": 1}, "evening") is None
 
 
 def test_gap_coldstart_history_import_silent(db):
@@ -219,9 +232,10 @@ def test_downgrade_three_rejected(db):
 
 def test_expire_pending_after_24h(db):
     r = rule(db, "expiry")
+    # created_at 用假时钟推算（08-13），不依赖 SQLite 实时钟（曾 flaky）
     db.execute(
         "INSERT INTO proposals (rule_id, text, status, shift, created_at)"
-        " VALUES (?,?,?,?, datetime('now','localtime','-2 days'))",
+        " VALUES (?,?,?,?, '2026-08-13 06:00')",
         (r["id"], "t", "pending", "morning"),
     )
     db.commit()

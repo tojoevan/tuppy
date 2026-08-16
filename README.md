@@ -27,7 +27,8 @@ v0.1 开发中。
 
 | 文档 | 内容 |
 |---|---|
-| [docs/v0.1-design.md](docs/v0.1-design.md) | v0.1 完整设计（**构建唯一参照**） |
+| [docs/v0.2-design.md](docs/v0.2-design.md) | v0.2 设计（**进行中，构建参照**） |
+| [docs/v0.1-design.md](docs/v0.1-design.md) | v0.1 完整设计（已固化，tag v0.1） |
 | [docs/day-script.md](docs/day-script.md) | 一天剧本（voice 参照） |
 | [docs/architecture.md](docs/architecture.md) | 愿景层（冻结） |
 | [docs/status.md](docs/status.md) | **项目当前状态**（部署、URL、判据进度） |

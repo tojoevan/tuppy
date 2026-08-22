@@ -133,8 +133,8 @@ location ^~ /mqtt {
 - 固件：xiaozhi-esp32-2.0.5-amoled-2.06/main/tuppy_link.cc（MQTT 客户端，URI=wss://tuppy.oahubs.com/mqtt）
 - VPS mosquitto：/etc/mosquitto/conf.d/tuppy.conf（1883 原生 + 1884 websocket，allow_anonymous true）
 - VPS nginx：/www/server/panel/vhost/nginx/extension/tuppy.oahubs.com/mqtt.conf
-- Tuppy 状态发布：001-first/notify.py（mqtt_status，mosquitto_pub → 127.0.0.1:1883）
-- 设计文档：001-first/docs/v0.3-design.md §0（固件 MQTT 通道）
+- Tuppy 状态发布：tuppy/notify.py（mqtt_status，mosquitto_pub → 127.0.0.1:1883）
+- 设计文档：tuppy/docs/v0.3-design.md §0（固件 MQTT 通道）
 
 ## 8. 遗留
 

@@ -77,7 +77,9 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 
 ## 自动部署（2026-08-15）
 
-- `/usr/local/bin/tuppy-deploy.sh` + root crontab `*/5` 轮询：fetch 比对 HEAD → 有变更 pull → **只有代码文件变更才 restart**（docs/README/CHANGELOG 变更只 pull 不重启）→ 重启后 curl 健康检查
+- `/usr/local/bin/tuppy-deploy.sh` + root crontab 每分钟 `[ -f .deploy-trigger ]` 触发：前台「更新」按钮 POST /deploy 写入 `.deploy-trigger` 后，cron 捡到即运行脚本（**不是自动轮询：push 本身不会触发部署，必须点一次「更新」**）
+- 脚本逻辑：fetch 比对 HEAD → 有变更 `reset --hard origin/main` → **只有代码文件变更才 restart**（docs/README/CHANGELOG 变更只 pull 不重启）→ 重启后 curl 健康检查
+- **fetch 带重试**（VPS→GitHub 偶发 GnuTLS 抖动，最多 6 次、单次 40s 上限、失败间隔 3s，全部失败才跳过本轮）；每次运行追加到 `deploy.log`（根除原脚本 fetch 静默失败、无日志的问题）
 - git 操作以 `sudo -u www` 身份跑（文件属主不变，避开之前的 root/www 身份坑）
 - 首次需 `sudo -u www git config --global --add safe.directory /www/wwwroot/tuppy.oahubs.com`（dubious ownership）
 - 不做 webhook：公网触发端点有攻击面，单人项目轮询足够
@@ -101,9 +103,9 @@ DB 每日备份轮转 7 份：晚班自动（engine.backup_db，backups/ 目录�
 
 ## 版本显示与部署加固（2026-08-16）
 
-- 页面 header 显示 git 短 hash（`v804c0fb` 格式），5 分钟内可肉眼确认自动部署是否生效
+- 页面 header 显示 git 短 hash（`v804c0fb` 格式），点「更新」后约 1 分钟内可肉眼确认部署是否生效
 - 部署脚本 `git pull` 改 `git reset --hard origin/main`：scp 直传会弄脏工作树导致 pull 卡死；reset 安全（tuppy.db/.env/backups 均 gitignored，不受影响）
-- VPS 连 GitHub 已恢复，scp fallback 不再需要，正常走 push → 5 分钟自动部署
+- VPS 连 GitHub 偶发不稳（curl 56 / GnuTLS recv error），已靠 fetch 重试收敛；若某次「更新」后版本号未变，隔 1 分钟再点一次即可
 
 ## 鉴权替换（2026-08-16）
 

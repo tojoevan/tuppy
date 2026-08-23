@@ -555,3 +555,133 @@ def run_shift(shift):
         raise
     finally:
         conn.close()
+
+
+# ---------- 微问答：从规则派生的轻量信息补充 ----------
+
+def derive_questions(conn):
+    """扫描已启用规则，按 template 派生微问答题。
+
+    每题带稳定 key（qa:{template}:{domain}:{category}），前端答过/跳过后写入
+    qa_state 不再问。返回 list[dict]：{key, kind, domain, category, q, hint, options?}
+    - expiry：问到期日（填空日期）
+    - surge：问上次数值（填空数字）
+    - habit+gap：问今天记没记（选择 记了/还没）
+    - overlap：跳过（冲突类不适合微问答）
+    """
+    out = []
+    for rule in conn.execute(
+        "SELECT * FROM rules WHERE status='propose'"
+    ).fetchall():
+        tpl = rule["template"]
+        dom = rule["domain"]
+        cat = rule["category"] or ""
+        label = f"{dom}·{cat}" if cat else dom
+        key = f"qa:{tpl}:{dom}:{cat}"
+        if tpl == "expiry":
+            out.append({
+                "key": key, "kind": "fill", "domain": dom, "category": cat,
+                "q": f"{label} 的到期日是什么时候？",
+                "hint": "填日期，如 2026-09-01 或 9/1",
+                "field": "happened_at",
+            })
+        elif tpl == "surge":
+            out.append({
+                "key": key, "kind": "fill", "domain": dom, "category": cat,
+                "q": f"上次 {label} 是多少？",
+                "hint": "填数字，如 128 或 230.5",
+                "field": "amount",
+            })
+        elif tpl == "gap" and rule["kind"] == "habit":
+            out.append({
+                "key": key, "kind": "choice", "domain": dom, "category": cat,
+                "q": f"今天 {label} 记了吗？",
+                "hint": "",
+                "options": [
+                    {"v": "yes", "t": "记了"},
+                    {"v": "no", "t": "还没"},
+                ],
+                "field": "done_today",
+            })
+        # overlap 等其它模板暂不支持微问答
+    return out
+
+
+def _qa_done(conn, key):
+    row = conn.execute(
+        "SELECT answered_at, skipped_at FROM qa_state WHERE key=?", (key,)
+    ).fetchone()
+    if not row:
+        return False
+    return bool(row["answered_at"] or row["skipped_at"])
+
+
+def next_question(conn):
+    """抽一道未答过的题（优先没答过的；都答过返回 None）。"""
+    for q in derive_questions(conn):
+        if not _qa_done(conn, q["key"]):
+            return q
+    return None
+
+
+def record_qa_skip(conn, key):
+    conn.execute(
+        "INSERT INTO qa_state (key, skipped_at) VALUES (?, datetime('now','localtime'))"
+        " ON CONFLICT(key) DO UPDATE SET skipped_at=datetime('now','localtime')",
+        (key,),
+    )
+    conn.commit()
+
+
+def apply_qa_answer(conn, q, value):
+    """把答案写成一条 entries（source='qa'），喂养数据库与判据。
+
+    - fill+happened_at：value 解析为日期写 entries（domain/category 来自规则）
+    - fill+amount：写一条 amount=value 的 entries
+    - choice+done_today=yes：写一条 today 的 entries（表示今天记了）
+       choice=no：只记 qa_state，不写 entries（避免噪音）
+    返回写入的 entry id 或 None。
+    """
+    dom, cat = q["domain"], q["category"]
+    today_iso = today().isoformat()
+    entry_id = None
+    if q["field"] == "happened_at":
+        d = parse_dt(value)
+        if d:
+            conn.execute(
+                "INSERT INTO entries (domain, category, happened_at, title,"
+                " note, status, source) VALUES (?,?,?,?,?, 'open', 'qa')",
+                (dom, cat, d.strftime("%Y-%m-%d %H:%M:%S"),
+                 f"{cat or dom}到期日", f"微问答补充：{value}"),
+            )
+            entry_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    elif q["field"] == "amount":
+        try:
+            amt = float(value)
+        except (TypeError, ValueError):
+            amt = None
+        if amt is not None:
+            conn.execute(
+                "INSERT INTO entries (domain, category, happened_at, amount,"
+                " title, note, status, source) VALUES (?,?,?,?,?,?, 'open', 'qa')",
+                (dom, cat, today_iso, amt,
+                 f"{cat or dom}数值", f"微问答补充：{value}"),
+            )
+            entry_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    elif q["field"] == "done_today" and value == "yes":
+        conn.execute(
+            "INSERT INTO entries (domain, category, happened_at, title,"
+            " note, status, source) VALUES (?,?,?,?,?, 'open', 'qa')",
+            (dom, cat, today_iso, f"{cat or dom}",
+             f"微问答：今天记了"),
+        )
+        entry_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    # 记 qa_state（无论是否写 entries，答过即停）
+    conn.execute(
+        "INSERT INTO qa_state (key, answered_at, kind) VALUES (?,"
+        " datetime('now','localtime'), ?)"
+        " ON CONFLICT(key) DO UPDATE SET answered_at=datetime('now','localtime')",
+        (q["key"], q["kind"]),
+    )
+    conn.commit()
+    return entry_id

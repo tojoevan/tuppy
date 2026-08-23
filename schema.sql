@@ -115,3 +115,12 @@ CREATE TABLE IF NOT EXISTS push_log (
   responded INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
+
+-- 微问答去重状态：同一题答过/跳过即不再问（答过即停）。
+CREATE TABLE IF NOT EXISTS qa_state (
+  key TEXT PRIMARY KEY,                 -- 稳定题号：qa:{template}:{domain}:{category}
+  answered_at TEXT,                     -- 答过时间；NULL=未答
+  skipped_at TEXT,                      -- 跳过时间；NULL=未跳
+  kind TEXT NOT NULL DEFAULT 'choice',  -- choice | fill
+  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);

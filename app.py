@@ -210,8 +210,10 @@ def index():
     else:
         greeting = f"有 {len(pending)} 件想跟你说：" \
             if pending else "今天没什么要跟你说的。"
+    q = engine.next_question(engine.get_db()) if not pending else None
     return render_template(
-        "index.html", proposals=proposals, history=history, greeting=greeting
+        "index.html", proposals=proposals, history=history, greeting=greeting,
+        qa=q,
     )
 
 
@@ -254,6 +256,34 @@ def reject(pid):
         conn.commit()
         flash("好，这条不说了。")
     conn.close()
+    return redirect(url_for("index"))
+
+
+@app.route("/qa/<key>", methods=["POST"])
+def qa_answer(key):
+    """微问答提交：选择/填空 → 写 entries（source='qa'）或跳过。"""
+    conn = engine.get_db()
+    q = next(
+        (x for x in engine.derive_questions(conn) if x["key"] == key), None
+    )
+    if not q:
+        conn.close()
+        flash("这道题已经不需要回答了。")
+        return redirect(url_for("index"))
+    action = request.form.get("action", "answer")
+    if action == "skip":
+        engine.record_qa_skip(conn, key)
+        conn.close()
+        flash("好，跳过了。")
+        return redirect(url_for("index"))
+    value = (request.form.get("value") or "").strip()
+    if not value:
+        conn.close()
+        flash("空着我就当没回答啦。")
+        return redirect(url_for("index"))
+    entry_id = engine.apply_qa_answer(conn, q, value)
+    conn.close()
+    flash("记下了，谢谢补这一笔。" if entry_id else "好，收到了。")
     return redirect(url_for("index"))
 
 

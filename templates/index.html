@@ -1,6 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
 <p>{{ greeting }}</p>
+
+{% if qa %}
+<div class="qa-card">
+  <div class="qa-q">{{ qa.q }}</div>
+  {% if qa.kind == 'choice' %}
+  <form method="post" action="/qa/{{ qa.key }}" class="qa-form">
+    {% for o in qa.options %}
+    <button class="btn qa-btn" name="value" value="{{ o.v }}">{{ o.t }}</button>
+    {% endfor %}
+    <button class="btn qa-skip" name="action" value="skip">跳过</button>
+  </form>
+  {% else %}
+  <form method="post" action="/qa/{{ qa.key }}" class="qa-form">
+    <input class="qa-input" name="value" placeholder="{{ qa.hint }}" autocomplete="off">
+    <button class="btn primary" type="submit">提交</button>
+    <button class="btn qa-skip" name="action" value="skip">跳过</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
 {% for p in proposals %}
 <div class="proposal">
   <div>{{ p.text }}</div>

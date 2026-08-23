@@ -115,6 +115,8 @@ MQTT 链路：Tuppy 班后 mosquitto_pub → 1883 → mosquitto → 1884(ws) →
 
 - VPS 连 GitHub 不稳：fetch 12 秒超时跳过，scp fallback 可用；deploy 脚本已加固
 - 生产库真实数据（2026-08-23 核查）：entries=3（信用卡/胰岛素/牛奶）、todos=0、proposals=1(expired)、push_log=8(08-16→08-22)、rule_log=0、shadow=0。输入饥饿，使用未启动。
+- 待办恒空根因已修（08-23）：recurring 规则（水费/燃气/物业/车辆保养·保险·年检/宠物驱虫 共 7 条）命中即自动落待办（status=kept + todos，due 取推算到期日），不再依赖手动 keep；非 recurring 维持 pending 等用户采纳。验证：车辆保养下次到期 08-28 已自动进待办。
+- anchor_date 冷启动锚点：规则页 `/rules` 给 recurring 规则加行内 date 输入框（/rule/<id>/anchor 路由），运营可自助维护，不必再靠脚本批量设。
 - 种子规则 15 条（含缴费/车辆/宠物/证件/健康域），没数据的安静沉默
 - ntfy 密码在 `/etc/ntfy/server.yml`（hash）+ `.env`（明文）两处，改密码需双同步 + 手机 app
 - schema.sql 变更不会自动迁移，需手动处理

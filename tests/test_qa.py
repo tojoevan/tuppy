@@ -127,3 +127,29 @@ def test_invalid_amount_not_written(db):
     after = db.execute("SELECT COUNT(*) c FROM entries").fetchone()["c"]
     assert eid is None
     assert after == before
+
+
+def test_empty_category_expiry_softened(db):
+    """category 为空的 expiry 规则用「你的X」软化问法，不派生病句。"""
+    db.execute(
+        "INSERT INTO rules (kind,domain,category,template,params,status)"
+        " VALUES ('detection','物品','','expiry','{\"days_before\":2}','propose')"
+    )
+    db.execute(
+        "INSERT INTO rules (kind,domain,category,template,params,status)"
+        " VALUES ('detection','信用卡','','expiry','{\"days_before\":2}','propose')"
+    )
+    qs = {q["key"]: q for q in engine.derive_questions(db)}
+    # 空 category 仍派生，且问法软化
+    assert "qa:expiry:物品:" in qs
+    assert qs["qa:expiry:物品:"]["q"] == "你的物品 的到期日是什么时候？"
+    assert "qa:expiry:信用卡:" in qs
+    # 证件的 category 在 seed 中也为空 → 同样软化
+    assert qs["qa:expiry:证件:"]["q"] == "你的证件 的到期日是什么时候？"
+
+
+def test_question_label_no_stray_dot(db):
+    """有 category 的题，问句主语不带多余点号且为合法主语。"""
+    qs = {q["key"]: q for q in engine.derive_questions(db)}
+    assert qs["qa:expiry:证件:"]["q"] == "你的证件 的到期日是什么时候？"
+    assert "·" not in qs["qa:expiry:证件:"]["q"]

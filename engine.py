@@ -576,26 +576,28 @@ def derive_questions(conn):
         tpl = rule["template"]
         dom = rule["domain"]
         cat = rule["category"] or ""
-        label = f"{dom}·{cat}" if cat else dom
+        # 主语：有子类用「domain·子类」，无子类用「你的 domain」软化问法，
+        # 避免「物品 的到期日」这类生硬且无解的病句。
+        subject = f"{dom}·{cat}" if cat else f"你的{dom}"
         key = f"qa:{tpl}:{dom}:{cat}"
         if tpl == "expiry":
             out.append({
                 "key": key, "kind": "fill", "domain": dom, "category": cat,
-                "q": f"{label} 的到期日是什么时候？",
+                "q": f"{subject} 的到期日是什么时候？",
                 "hint": "填日期，如 2026-09-01 或 9/1",
                 "field": "happened_at",
             })
         elif tpl == "surge":
             out.append({
                 "key": key, "kind": "fill", "domain": dom, "category": cat,
-                "q": f"上次 {label} 是多少？",
+                "q": f"上次 {subject} 是多少？",
                 "hint": "填数字，如 128 或 230.5",
                 "field": "amount",
             })
         elif tpl == "gap" and rule["kind"] == "habit":
             out.append({
                 "key": key, "kind": "choice", "domain": dom, "category": cat,
-                "q": f"今天 {label} 记了吗？",
+                "q": f"今天 {subject} 记了吗？",
                 "hint": "",
                 "options": [
                     {"v": "yes", "t": "记了"},

@@ -39,6 +39,13 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("TUPPY_SECRET", "dev-secret-change-me")
 app.permanent_session_lifetime = dt.timedelta(days=30)
 
+
+@app.after_request
+def add_version_header(resp):
+    """响应头带版本号，便于无登录时 curl -I 看线上部署是否生效。"""
+    resp.headers["X-Tuppy-Version"] = git_version()
+    return resp
+
 # 登录密码独立于 session 密钥。部署时生成随机值写 .env。
 TUPPY_PASSWORD = os.environ.get("TUPPY_PASSWORD", "tuppy-change-me")
 

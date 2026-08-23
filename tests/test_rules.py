@@ -96,3 +96,62 @@ def test_import_bad_params_type_rejected(client):
     n_before = rule_count()
     client.post("/rules/import", data={"json": body})
     assert rule_count() == n_before
+
+
+def test_anchor_update_route(client):
+    """recurring 规则锚点：前台 POST 更新回写 rules.anchor_date。"""
+    # 插一条 recurring 规则
+    conn = engine.get_db()
+    conn.execute(
+        "INSERT INTO rules (kind, domain, category, template, params, status,"
+        " anchor_date) VALUES ('detection','缴费','水费','expiry',"
+        "'{\"days_before\":3,\"recurring\":true,\"period_days\":30}',"
+        " 'propose', '2026-01-01')"
+    )
+    conn.commit()
+    rid = conn.execute("SELECT last_insert_rowid() id").fetchone()["id"]
+    conn.close()
+    r = client.post(f"/rule/{rid}/anchor", data={"anchor_date": "2026-07-15"})
+    assert r.status_code == 302
+    conn = engine.get_db()
+    assert conn.execute(
+        "SELECT anchor_date FROM rules WHERE id=?", (rid,)
+    ).fetchone()["anchor_date"] == "2026-07-15"
+    conn.close()
+
+
+def test_anchor_clear_route(client):
+    conn = engine.get_db()
+    conn.execute(
+        "INSERT INTO rules (kind, domain, category, template, params, status,"
+        " anchor_date) VALUES ('detection','缴费','燃气','expiry',"
+        "'{\"days_before\":3,\"recurring\":true,\"period_days\":60}',"
+        " 'propose', '2026-01-01')"
+    )
+    conn.commit()
+    rid = conn.execute("SELECT last_insert_rowid() id").fetchone()["id"]
+    conn.close()
+    r = client.post(f"/rule/{rid}/anchor", data={"anchor_date": ""})
+    assert r.status_code == 302
+    conn = engine.get_db()
+    assert conn.execute(
+        "SELECT anchor_date FROM rules WHERE id=?", (rid,)
+    ).fetchone()["anchor_date"] is None
+    conn.close()
+
+
+def test_rules_page_shows_anchor_input_for_recurring(client):
+    """recurring 规则在规则页显示锚点 date 输入框。"""
+    conn = engine.get_db()
+    conn.execute(
+        "INSERT INTO rules (kind, domain, category, template, params, status,"
+        " anchor_date) VALUES ('detection','缴费','物业','expiry',"
+        "'{\"days_before\":7,\"recurring\":true,\"period_days\":90}',"
+        " 'propose', '2026-07-01')"
+    )
+    conn.commit()
+    conn.close()
+    r = client.get("/rules")
+    html = r.get_data(as_text=True)
+    assert 'name="anchor_date"' in html
+    assert 'value="2026-07-01"' in html

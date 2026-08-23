@@ -3,13 +3,24 @@
 <p>它在按这些规则看你的数据。没数据的规则安静躺着，录到什么活什么。</p>
 <div class="table-wrap">
 <table>
-<tr><th>域</th><th>分类</th><th>看什么</th><th>参数</th><th>命中率</th><th>状态</th><th></th></tr>
+<tr><th>域</th><th>分类</th><th>看什么</th><th>参数</th><th>锚点</th><th>命中率</th><th>状态</th><th></th></tr>
 {% for r in rules %}
 <tr>
   <td>{{ r.domain }}</td>
   <td>{{ r.category or '全部' }}</td>
   <td>{{ template_cn.get(r.template, r.template) }}</td>
   <td style="font-size:.8em;color:#666">{{ r.params }}</td>
+  <td>
+    {% if r.recurring %}
+    <form method="post" action="/rule/{{ r.id }}/anchor" style="display:flex;gap:4px;align-items:center">
+      <input type="date" name="anchor_date" value="{{ r.anchor_date or '' }}"
+             style="font-size:.8em;padding:2px 4px;border:1px solid #ccc;border-radius:4px;width:130px">
+      <button class="btn" style="padding:2px 6px;font-size:.8em">设</button>
+    </form>
+    {% else %}
+    <span class="muted">—</span>
+    {% endif %}
+  </td>
   <td>{{ (rates.get(r.id) * 100)|round|int ~ '%' if rates.get(r.id) is not none else '—' }}</td>
   <td>{{ status_cn.get(r.status, r.status) }}</td>
   <td>

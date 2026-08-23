@@ -637,7 +637,17 @@ STATUS_CN = {"propose": "提议", "observe": "观察", "archive": "归档"}
 @app.route("/rules")
 def rules_page():
     conn = engine.get_db()
-    rules = conn.execute("SELECT * FROM rules ORDER BY status, id").fetchall()
+    rows = conn.execute("SELECT * FROM rules ORDER BY status, id").fetchall()
+    import json as _json
+    rules = []
+    for r in rows:
+        d = dict(r)
+        try:
+            params = _json.loads(r["params"] or "{}")
+        except Exception:
+            params = {}
+        d["recurring"] = bool(params.get("recurring", False))
+        rules.append(d)
     rates = rule_hit_rate(conn)
     conn.close()
     return render_template(
@@ -653,6 +663,22 @@ def rule_delete(rid):
     conn.commit()
     conn.close()
     flash("规则删掉了。")
+    return redirect(url_for("rules_page"))
+
+
+@app.route("/rule/<int:rid>/anchor", methods=["POST"])
+def rule_anchor(rid):
+    """recurring 规则冷启动锚点：用户在前台填「上次 X 哪天」即可驱动后续推算。"""
+    conn = engine.get_db()
+    r = conn.execute("SELECT * FROM rules WHERE id=?", (rid,)).fetchone()
+    if r:
+        val = (request.form.get("anchor_date") or "").strip() or None
+        conn.execute(
+            "UPDATE rules SET anchor_date=? WHERE id=?", (val, rid)
+        )
+        conn.commit()
+        flash("锚点已更新。" if val else "锚点已清空。")
+    conn.close()
     return redirect(url_for("rules_page"))
 
 

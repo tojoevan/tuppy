@@ -73,7 +73,7 @@ def _rule_hint(rule):
     return f"{rule['domain']}·{cat}·{rule['template']}"
 
 
-def _hit(candidate, text, rule, shadow_type=None, entry_id=None):
+def _hit(candidate, text, rule, shadow_type=None, entry_id=None, due_date=None):
     return {
         "is_candidate": candidate,
         "rule_id": rule["id"],
@@ -81,6 +81,7 @@ def _hit(candidate, text, rule, shadow_type=None, entry_id=None):
         "rule_hint": _rule_hint(rule),
         "shadow_type": shadow_type,
         "entry_id": entry_id,
+        "due_date": due_date,
         "priority": rule["priority"],
     }
 
@@ -97,7 +98,9 @@ def _missed_periods(last_date, period, include_today):
 
 
 def _pending_for_rule(conn, rule_id, text=None):
-    sql = "SELECT id FROM proposals WHERE rule_id=? AND status='pending'"
+    # pending（待用户采纳）+ kept（已采纳/recurring 自动落待办）都算已处理，
+    # 避免同一规则一天内早晚班重复出提议或重复落待办。
+    sql = "SELECT id FROM proposals WHERE rule_id=? AND status IN ('pending','kept')"
     args = [rule_id]
     if text:
         sql += " AND text=?"
@@ -306,7 +309,8 @@ def scan_expiry(conn, rule, params):
             text = f"{r['title']}还有 {days_left} 天到期"
         if _pending_for_rule(conn, rule["id"], text):
             continue
-        hits.append(_hit(True, text, rule, entry_id=r["id"]))
+        hits.append(_hit(True, text, rule, entry_id=r["id"],
+                         due_date=due.date().isoformat()))
     # recurring 冷启动：无任何 entry 时，凭 anchor_date 推算下一个未来到期日
     if recurring and not rows and rule["anchor_date"]:
         due = parse_dt(rule["anchor_date"])
@@ -319,7 +323,8 @@ def scan_expiry(conn, rule, params):
                 text = (f"{subject}下次到期还有 {days_left} 天"
                         if days_left >= 0 else f"{subject}已过期 {-days_left} 天")
                 if not _pending_for_rule(conn, rule["id"], text):
-                    hits.append(_hit(True, text, rule))
+                    hits.append(_hit(True, text, rule,
+                                     due_date=due.date().isoformat()))
     return hits
 
 
@@ -516,7 +521,10 @@ def run_shift(shift):
                     continue
                 if isinstance(res, dict):
                     res = [res]
+                recurring = bool(params.get("recurring", False))
                 for h in res or []:
+                    if recurring:
+                        h["auto_todo"] = True
                     if h["is_candidate"]:
                         candidates.append(h)
                     else:
@@ -526,16 +534,25 @@ def run_shift(shift):
         ordered = sorted(candidates, key=lambda c: -c["priority"])
         for i, h in enumerate(ordered):
             if i < PROPOSAL_LIMIT:
-                conn.execute(
+                auto = bool(h.get("auto_todo"))
+                status = "kept" if auto else "pending"
+                cur = conn.execute(
                     "INSERT INTO proposals (rule_id, entry_id, text, status,"
                     " shift) VALUES (?,?,?,?,?)",
                     (h["rule_id"], h.get("entry_id"), h["text"],
-                     "pending", shift),
+                     status, shift),
                 )
+                pid = cur.lastrowid
                 if h.get("entry_id"):
                     conn.execute(
                         "UPDATE entries SET status='notified' WHERE id=?",
                         (h["entry_id"],),
+                    )
+                # recurring 规则命中：周期事务本就该办，自动落待办，不打扰确认
+                if auto:
+                    conn.execute(
+                        "INSERT INTO todos (proposal_id, text, due) VALUES (?,?,?)",
+                        (pid, h["text"], h.get("due_date")),
                     )
             else:
                 h["shadow_type"] = "挤掉"

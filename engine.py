@@ -271,6 +271,7 @@ def scan_expiry(conn, rule, params):
     days_before = int(params.get("days_before", 3))
     recurring = bool(params.get("recurring", False))
     period_days = int(params.get("period_days", 30))
+    subject = rule["category"] or rule["domain"]
     rows = conn.execute(
         "SELECT * FROM entries WHERE domain=? AND status IN ('open','notified')"
         " ORDER BY happened_at",
@@ -306,6 +307,19 @@ def scan_expiry(conn, rule, params):
         if _pending_for_rule(conn, rule["id"], text):
             continue
         hits.append(_hit(True, text, rule, entry_id=r["id"]))
+    # recurring 冷启动：无任何 entry 时，凭 anchor_date 推算下一个未来到期日
+    if recurring and not rows and rule["anchor_date"]:
+        due = parse_dt(rule["anchor_date"])
+        if due:
+            while due.date() <= today():
+                due += dt.timedelta(days=period_days)
+            days_left = (due.date() - today()).days
+            # 仅临近（≤ days_before）或已过期才出提醒，避免一上来就轰炸全年
+            if days_left <= days_before:
+                text = (f"{subject}下次到期还有 {days_left} 天"
+                        if days_left >= 0 else f"{subject}已过期 {-days_left} 天")
+                if not _pending_for_rule(conn, rule["id"], text):
+                    hits.append(_hit(True, text, rule))
     return hits
 
 
@@ -657,6 +671,23 @@ def apply_qa_answer(conn, q, value):
                  f"{cat or dom}到期日", f"微问答补充：{value}"),
             )
             entry_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            # A 补充：recurring 规则把「上次/最近一次」回写为冷启动锚点，
+            # 使 scan_expiry 能凭 anchor + period 推算下次到期（哪怕无历史 entry）。
+            rule = conn.execute(
+                "SELECT * FROM rules WHERE domain=? AND category=? AND template='expiry'",
+                (dom, cat),
+            ).fetchone()
+            if rule and rule["params"]:
+                try:
+                    import json
+                    is_recurring = json.loads(rule["params"]).get("recurring")
+                except (json.JSONDecodeError, TypeError):
+                    is_recurring = False
+                if is_recurring:
+                    conn.execute(
+                        "UPDATE rules SET anchor_date=? WHERE id=?",
+                        (d.strftime("%Y-%m-%d"), rule["id"]),
+                    )
     elif q["field"] == "amount":
         try:
             amt = float(value)

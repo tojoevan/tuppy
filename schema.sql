@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS rules (
   template TEXT NOT NULL,             -- gap | overlap | surge | expiry
   params TEXT NOT NULL DEFAULT '{}',  -- JSON
   priority INTEGER NOT NULL DEFAULT 5,
-  status TEXT NOT NULL DEFAULT 'propose'  -- propose | observe | archive
+  status TEXT NOT NULL DEFAULT 'propose',  -- propose | observe | archive
+  anchor_date TEXT                        -- recurring 冷启动锚点（如车险每年 X 月 X 日）
 );
 
 CREATE TABLE IF NOT EXISTS proposals (

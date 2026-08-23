@@ -180,6 +180,58 @@ def test_expiry_recurring_rolls_forward(db):
     assert row["happened_at"] >= "2026-08-15"
 
 
+def test_recurring_coldstart_with_anchor(db):
+    """recurring 规则无任何 entry 时，凭 anchor_date 生成下个到期提醒。"""
+    anchor = (TODAY - dt.timedelta(days=25)).isoformat()
+    db.execute(
+        "INSERT INTO rules (kind, domain, category, template, params, anchor_date)"
+        " VALUES ('detection','缴费','物业X','expiry',"
+        "'{\"days_before\":7,\"recurring\":true,\"period_days\":30}',?)",
+        (anchor,),
+    )
+    db.commit()
+    rid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    r = db.execute("SELECT * FROM rules WHERE id=?", (rid,)).fetchone()
+    hits = engine.scan_expiry(db, r,
+                              {"days_before": 7, "recurring": True, "period_days": 30})
+    assert hits, "冷启动应凭 anchor 生成待办"
+    assert "下次到期" in hits[0]["text"]
+
+
+def test_recurring_no_anchor_no_entry_silent(db):
+    """recurring 规则既无 entry 也无 anchor，应保持沉默（不凭空轰炸）。"""
+    db.execute(
+        "INSERT INTO rules (kind, domain, category, template, params)"
+        " VALUES ('detection','缴费','燃气X','expiry',"
+        "'{\"days_before\":3,\"recurring\":true,\"period_days\":60}')",
+    )
+    db.commit()
+    rid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    r = db.execute("SELECT * FROM rules WHERE id=?", (rid,)).fetchone()
+    assert engine.scan_expiry(db, r,
+                              {"days_before": 3, "recurring": True, "period_days": 60}) == []
+
+
+def test_qa_expiry_recurring_writes_anchor(db):
+    """微问答答 recurring expiry 的「上次哪天」，回写 rules.anchor_date。"""
+    db.execute(
+        "INSERT INTO rules (kind, domain, category, template, params)"
+        " VALUES ('detection','缴费','水费X','expiry',"
+        "'{\"days_before\":3,\"recurring\":true,\"period_days\":30}')",
+    )
+    db.commit()
+    rid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    q = {
+        "key": "qa:expiry:缴费:水费X", "domain": "缴费", "category": "水费X",
+        "field": "happened_at", "kind": "fill",
+    }
+    engine.apply_qa_answer(db, q, "2026-08-01")
+    anchor = db.execute(
+        "SELECT anchor_date FROM rules WHERE id=?", (rid,)
+    ).fetchone()["anchor_date"]
+    assert anchor == "2026-08-01"
+
+
 # ---------- 限额与降权 ----------
 
 def test_cap_three_candidates_crowd_out(db):

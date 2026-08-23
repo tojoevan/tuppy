@@ -44,9 +44,22 @@ def _migration_0002_todo_due(conn):
         conn.execute("ALTER TABLE todos ADD COLUMN due TEXT")
 
 
+def _migration_0003_anchor_date(conn):
+    """recurring 规则冷启动锚点：rules.anchor_date。
+
+    周期类规则（水费/物业/车险/年检…）此前必须依赖一条历史 entry 才能
+    推算下次到期，导致全新库永远 0 待办。加 anchor_date 后，规则可凭
+    「锚点 + N×period_days」直接生成下一个未来到期提醒。
+    用户通过微问答补的「上次 X 哪天」也回写此字段，作为 fallback。
+    """
+    if not _has_column(conn, "rules", "anchor_date"):
+        conn.execute("ALTER TABLE rules ADD COLUMN anchor_date TEXT")
+
+
 MIGRATIONS = [
     ("0001_budget", _migration_0001_budget),
     ("0002_todo_due", _migration_0002_todo_due),
+    ("0003_anchor_date", _migration_0003_anchor_date),
 ]
 
 

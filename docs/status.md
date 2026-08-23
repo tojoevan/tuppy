@@ -125,7 +125,8 @@ MQTT 链路：Tuppy 班后 mosquitto_pub → 1883 → mosquitto → 1884(ws) →
 - 部署健康检查打 /login（根路径 302 是登录拦截，非故障）
 - 08-23 文档刷新：status.md / README 对齐 v0.2 完成 + v0.3 进展；此前 9 个提交已 push 至 origin/main（不再本地裸奔）
 - 08-23 晚 v0.3 硬件验收 ✅：固件烧录 + 语音录入「帮我记一下」跑通（MCP 双向，source='voice'）。announce/按键手势属未实施扩展愿景，不计入验收。下一步进入每日录入攒数据期，08-30 做 P1 行为判据验收。
-- 微问答 skip 改软跳过（08-23，commit a158b66，待 VPS 部署）：跳过=「当前不想答/没数据」，不屏蔽、循环随机重问；只有真正答过（answered_at）才永久停。next_question 由顺序取首道改为从未答池随机抽。VPS 旧 skip 记录部署后自动复活可问。
+- 微问答 skip 改软跳过（08-23，commit a158b66，已部署）：跳过=「当前不想答/没数据」，不屏蔽、循环随机重问；只有真正答过（answered_at）才永久停。next_question 由顺序取首道改为从未答池随机抽。VPS 旧 skip 记录部署后自动复活可问。
+- 微问答 expiry/surge 题护栏（08-23→24，commit 5f580b4，已部署）：domain(+category) 已有对应 entry 时跳过补信息题，避免「你的信用卡的到期日」这类没指定哪条、无法回答的笼统问法。删 entry 后题复活。
 
 ## v0.2 进度（代码完成，真实使用待启动）
 

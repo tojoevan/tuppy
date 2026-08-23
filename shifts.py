@@ -64,18 +64,16 @@ def after_shift(shift):
     quota = engine.current_quota(conn)
     used = engine.pushed_today(conn)
     if shift == "morning":
-        n = conn.execute(
-            "SELECT COUNT(*) FROM proposals WHERE status='pending'"
-        ).fetchone()[0]
-        if n:
-            text = f"Tuppy 早班：{n} 件想跟你说"
+        top = engine.pick_today_top(conn)
+        if top:
+            text = f"今天最该办：{top['text']}"
             if used >= quota:
                 _budget_silence(
                     conn, shift,
-                    f"有 {n} 件想跟你说，但今天预算已用完（{used}/{quota}）",
+                    f"今天有想跟你说的事，但预算已用完（{used}/{quota}）",
                 )
             else:
-                notify.send("Tuppy 早班", f"{n} 件想跟你说", click_url=site)
+                notify.send("Tuppy 早班", text, click_url=site + top["url"])
                 _record_push(conn, shift, text)
     else:
         n = conn.execute(

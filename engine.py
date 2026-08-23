@@ -742,3 +742,33 @@ def apply_qa_answer(conn, q, value):
     )
     conn.commit()
     return entry_id
+
+
+def pick_today_top(conn):
+    """挑今天最该处理的 1 条，供早班推送聚焦。
+
+    规则：优先待办（todos, done=0）里 due 最近且未过期的；
+    没有则退回 pending 提议里优先级最高的。都没有返回 None。
+    返回 {text, url} 或 None。
+    """
+    t = today().isoformat()
+    # 1) 待办：due 最近且未过期（含无 due 的排最后）
+    row = conn.execute(
+        "SELECT id, text, due FROM todos WHERE done=0"
+        " AND (due IS NULL OR due >= ?)"
+        " ORDER BY (due IS NULL), due ASC LIMIT 1",
+        (t,),
+    ).fetchone()
+    if row:
+        return {"text": row["text"], "url": "/todos"}
+    # 2) 退回 pending 提议：按所属规则优先级最高
+    row = conn.execute(
+        "SELECT p.id, p.text, r.priority FROM proposals p"
+        " JOIN rules r ON r.id=p.rule_id"
+        " WHERE p.status='pending'"
+        " ORDER BY r.priority DESC, p.id DESC LIMIT 1"
+    ).fetchone()
+    if row:
+        return {"text": row["text"], "url": "/"}
+    return None
+

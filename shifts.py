@@ -1,7 +1,7 @@
 """Tuppy 两班入口。
 
 用法：
-    python shifts.py morning   # 早班（cron 06:30）
+    python shifts.py morning   # 早班（cron 08:30）
     python shifts.py evening   # 晚班（cron 22:00）
 """
 

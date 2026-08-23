@@ -181,7 +181,7 @@ def test_expiry_recurring_rolls_forward(db):
 
 
 def test_recurring_coldstart_with_anchor(db):
-    """recurring 规则无任何 entry 时，凭 anchor_date 生成下个到期提醒。"""
+    """recurring 规则有 entry 历史 + anchor：生成下个到期提醒（护栏：无 entry 则静默）。"""
     anchor = (TODAY - dt.timedelta(days=25)).isoformat()
     db.execute(
         "INSERT INTO rules (kind, domain, category, template, params, anchor_date)"
@@ -191,11 +191,34 @@ def test_recurring_coldstart_with_anchor(db):
     )
     db.commit()
     rid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    # domain 有历史 entry → anchor 合法
+    db.execute(
+        "INSERT INTO entries (domain, category, title, happened_at, status)"
+        " VALUES ('缴费','物业X','物业缴费', ?, 'open')", (anchor,)
+    )
+    db.commit()
     r = db.execute("SELECT * FROM rules WHERE id=?", (rid,)).fetchone()
     hits = engine.scan_expiry(db, r,
                               {"days_before": 7, "recurring": True, "period_days": 30})
-    assert hits, "冷启动应凭 anchor 生成待办"
-    assert "下次到期" in hits[0]["text"]
+    assert hits, "有 entry 历史 + anchor 应生成待办"
+    assert "到期" in hits[0]["text"]
+
+
+def test_recurring_coldstart_anchor_without_entry_silent(db):
+    """护栏：domain 无 entry 历史，即便有 anchor 也静默（不替用户发明事务）。"""
+    anchor = (TODAY - dt.timedelta(days=25)).isoformat()
+    db.execute(
+        "INSERT INTO rules (kind, domain, category, template, params, anchor_date)"
+        " VALUES ('detection','缴费','物业Y','expiry',"
+        "'{\"days_before\":7,\"recurring\":true,\"period_days\":30}',?)",
+        (anchor,),
+    )
+    db.commit()
+    rid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    r = db.execute("SELECT * FROM rules WHERE id=?", (rid,)).fetchone()
+    hits = engine.scan_expiry(db, r,
+                              {"days_before": 7, "recurring": True, "period_days": 30})
+    assert hits == [], "无 entry 历史的 anchor 不应出提醒"
 
 
 def test_recurring_no_anchor_no_entry_silent(db):

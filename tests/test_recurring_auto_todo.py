@@ -38,9 +38,27 @@ def recurring_rule(db, domain, category, anchor, period_days=30, days_before=3):
 
 # ---------- recurring 冷启动自动落待办 ----------
 
-def test_recurring_coldstart_auto_todo_real(db):
+def test_recurring_coldstart_silent_without_entry(db):
+    """护栏：domain 无 entry 历史时，即便有 anchor 也静默，不替用户发明事务。"""
     r = recurring_rule(db, "缴费", "水费2", "2026-07-30", period_days=30,
                        days_before=10)
+    engine.run_shift("morning")
+    props = db.execute(
+        "SELECT * FROM proposals WHERE rule_id=?", (r["id"],)
+    ).fetchall()
+    assert len(props) == 0  # 无 entry → 不出提醒
+
+
+def test_recurring_coldstart_with_entry_and_anchor(db):
+    """有 entry 历史 + anchor：临近出提醒并自动落待办。"""
+    r = recurring_rule(db, "缴费", "水费3", "2026-07-30", period_days=30,
+                       days_before=10)
+    # domain 有历史 entry → anchor 合法
+    db.execute(
+        "INSERT INTO entries (domain, category, title, happened_at, status)"
+        " VALUES ('缴费','水费3','水费缴费', '2026-07-30 00:00:00', 'open')"
+    )
+    db.commit()
     engine.run_shift("morning")
     props = db.execute(
         "SELECT * FROM proposals WHERE rule_id=?", (r["id"],)
@@ -57,6 +75,11 @@ def test_recurring_no_double_todo(db):
     """同一 anchor 当天重复跑班次，不重复生成 todo。"""
     r = recurring_rule(db, "缴费", "燃气2", "2026-07-30", period_days=30,
                        days_before=10)
+    db.execute(
+        "INSERT INTO entries (domain, category, title, happened_at, status)"
+        " VALUES ('缴费','燃气2','燃气缴费', '2026-07-30 00:00:00', 'open')"
+    )
+    db.commit()
     engine.run_shift("morning")
     engine.run_shift("evening")  # evening 也能扫描
     todos = db.execute(

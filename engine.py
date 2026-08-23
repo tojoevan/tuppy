@@ -311,8 +311,15 @@ def scan_expiry(conn, rule, params):
             continue
         hits.append(_hit(True, text, rule, entry_id=r["id"],
                          due_date=due.date().isoformat()))
-    # recurring 冷启动：无任何 entry 时，凭 anchor_date 推算下一个未来到期日
+    # recurring 冷启动：凭 anchor_date 推算下一个未来到期日。
+    # 护栏：anchor 只在「该 domain 历史上真发生过（有 entry）」或「用户主动确认过」
+    # 时才算数——系统 seed 编造的锚点（无 entry 支撑）一律静默，不替用户发明事务。
     if recurring and not rows and rule["anchor_date"]:
+        has_history = conn.execute(
+            "SELECT 1 FROM entries WHERE domain=? LIMIT 1", (rule["domain"],)
+        ).fetchone()
+        if not has_history:
+            return hits
         due = parse_dt(rule["anchor_date"])
         if due:
             while due.date() <= today():

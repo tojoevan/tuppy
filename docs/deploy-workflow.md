@@ -116,3 +116,4 @@ sudo -u www git -C /www/wwwroot/tuppy.oahubs.com reset --hard origin/main
 - 实测线上 HEAD = `9598b26`，`app.py` 无 `/pushes` 路由 → **自动部署当时未生效**。
 - 修复：未白 `sudo -u www git fetch && reset --hard origin/main` 把 VPS 拉到 `8bd90e4`（`/pushes` 路由数 0→1）。**服务进程仍是旧代码，需 joevan 在宝塔面板点 tuppy 项目「重启」生效**。
 - 遗留：自动部署 cron 为何失效待排查。
+- **已手动部署生效（13:51）**：`sudo systemctl restart tuppy` 重启进程 → 新进程启动时间刷新 → `curl 127.0.0.1:8321/pushes` 返回 **302**（旧代码会 404）→ 确证 `4b1aeda`（含 /pushes）已上线。**宝塔反代层无需改动**，自动转发到重生进程。结论：不是动态加载，改代码必须 restart 后端进程。

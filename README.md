@@ -34,6 +34,7 @@ v0.1 已闭环；v0.2 功能完成、进入 14 天判据观察期（2026-08-16 �
 | [docs/status.md](docs/status.md) | **项目当前状态**（部署、URL、判据进度） |
 | [docs/testing.md](docs/testing.md) | 测试策略 |
 | [docs/release.md](docs/release.md) | 发布与部署 |
+| [docs/deploy-workflow.md](docs/deploy-workflow.md) | **部署运作流程 + 未白×joevan 配合方式**（速查） |
 | [docs/security.md](docs/security.md) | 安全模型 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本历史 |
 

@@ -869,6 +869,50 @@ def weekly():
     )
 
 
+@app.route("/pushes")
+def pushes():
+    conn = engine.get_db()
+    # 每条推送实时计算「10 分钟内响应」：
+    # 早班 → 当天 morning 提议在推送后 10 分钟内被接受/拒绝；
+    # 晚班 → 当天待办在推送后 10 分钟内完成。周报心跳不统计。
+    rows = conn.execute(
+        """
+        SELECT p.id, p.date, p.shift, p.text, p.created_at, p.responded,
+          CASE WHEN p.shift='weekly' THEN -1
+               WHEN p.shift='morning' THEN COALESCE((
+                 SELECT 1 FROM proposals
+                 WHERE shift='morning' AND date(created_at)=p.date
+                   AND status IN ('kept','rejected') AND resolved_at IS NOT NULL
+                   AND resolved_at >= p.created_at
+                   AND resolved_at <= datetime(p.created_at, '+10 minutes')
+                 LIMIT 1), 0)
+               ELSE COALESCE((
+                 SELECT 1 FROM todos
+                 WHERE done=1 AND done_at IS NOT NULL
+                   AND date(done_at)=p.date
+                   AND done_at >= p.created_at
+                   AND done_at <= datetime(p.created_at, '+10 minutes')
+                 LIMIT 1), 0)
+          END AS responded_10m
+        FROM push_log p
+        ORDER BY p.created_at DESC
+        """
+    ).fetchall()
+    total = sum(1 for r in rows if r["shift"] != "weekly")
+    r10 = sum(1 for r in rows if r["responded_10m"] == 1)
+    rsame = sum(1 for r in rows if r["responded"] == 1 and r["shift"] != "weekly")
+    conn.close()
+    return render_template(
+        "pushes.html",
+        rows=rows,
+        total=total,
+        r10=r10,
+        r10_rate=round(r10 / total * 100) if total else None,
+        rsame=rsame,
+        rsame_rate=round(rsame / total * 100) if total else None,
+    )
+
+
 if __name__ == "__main__":
     # 只监听本机——公网入口由宝塔反代负责，绕开反代直连不可达
     app.run(host="127.0.0.1", port=8321)

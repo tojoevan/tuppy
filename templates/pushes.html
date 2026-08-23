@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<p>每次它主动找你，都记在这里。重点看「10 分钟内」——你被戳一下后，有没有马上理。</p>
+
+<div class="proposal">
+  <div>推送总数（不含周报心跳）：<b>{{ total }}</b></div>
+  <div>10 分钟内响应：<b>{{ r10 }}</b> 次（{{ r10_rate }}%）</div>
+  <div class="muted">当天响应（旧口径）：{{ rsame }} 次（{{ rsame_rate }}%）</div>
+</div>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>时间</th><th>班次</th><th>内容</th><th>10 分钟内</th></tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td class="time-col">{{ r.created_at }}</td>
+    <td>{{ '周报' if r.shift=='weekly' else ('早班' if r.shift=='morning' else '晚班') }}</td>
+    <td>{{ r.text }}</td>
+    <td>
+      {% if r.shift=='weekly' %}<span class="muted">—</span>
+      {% elif r.responded_10m == 1 %}<span style="color:#3a3">✅ 是</span>
+      {% else %}<span style="color:#c33">否</span>{% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="4" class="muted">还没有推送记录。</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="muted">"响应"定义：早班推送后 10 分钟内点了提议的接受/拒绝；晚班推送后 10 分钟内完成了待办。实时计算，不另存。</p>
+{% endblock %}

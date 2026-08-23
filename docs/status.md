@@ -33,6 +33,7 @@ v0.5   静音牌/多成员/小程序
 | 测试 | ✅ 39→56 用例全过 | tests/ |
 | MCP 语音终端（录入+查询双向） | ✅ | mcp_server.py + scripts/mcp_pipe.py |
 | MQTT 设备状态发布 | ✅ | 班后 mosquitto_pub → 固件屏显 |
+| 推送记录页（含 10 分钟响应率） | ✅ | /pushes，实时计算不另存 |
 
 ## 关键 URL
 

@@ -162,7 +162,21 @@ def inject_light():
     conn = engine.get_db()
     light = health_light(conn)
     conn.close()
-    return {"light": light, "version": git_version()}
+    return {"light": light, "version": git_version(),
+            "deploy_status": get_deploy_status()}
+
+
+def get_deploy_status():
+    """读部署脚本写的结果状态文件（.deploy-status.json），供前台显示图标。
+
+    文件由 /usr/local/bin/tuppy-deploy.sh 在每次部署结束/失败时写入；
+    不存在或损坏时返回 None（前台不显示图标）。
+    """
+    p = engine.BASE / ".deploy-status.json"
+    try:
+        return json.loads(p.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 @app.route("/static/<path:filename>")

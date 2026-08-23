@@ -5,4 +5,5 @@ __pycache__/
 .env
 .venv/
 .deploy-trigger
+.deploy-status.json
 ntfy_*.deb

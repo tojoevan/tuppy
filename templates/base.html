@@ -34,6 +34,9 @@ input,select,textarea{border:1px solid #ccc;border-radius:6px;
      padding:6px 8px;font-size:.95em;font-family:inherit;max-width:100%}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .nav-out{flex:0 0 auto;margin-left:auto}
+.deploy-badge{font-size:.72em;margin-left:6px;padding:1px 6px;border-radius:10px;vertical-align:middle}
+.deploy-badge.fail{background:#fde8e8;color:#c33;border:1px solid #f5c2c2}
+.deploy-badge.ok{background:#eafaef;color:#3a3;border:1px solid #cfe9d4}
 @media (max-width:640px){
   .nav-links a{margin-right:12px}
 }
@@ -50,6 +53,13 @@ td.time-col{white-space:normal;min-width:110px}
   <form method="post" action="/deploy" style="display:inline">
     <button class="btn" style="padding:1px 8px;font-size:.8em">更新</button>
   </form>
+  {% if deploy_status %}
+    {% if deploy_status.status == 'fail' %}
+      <span class="deploy-badge fail" title="上次部署（{{ deploy_status.ts }}）失败：{{ deploy_status.msg }}">⚠ 部署失败</span>
+    {% else %}
+      <span class="deploy-badge ok" title="上次部署（{{ deploy_status.ts }}）成功">✓</span>
+    {% endif %}
+  {% endif %}
   <span class="light {{ light[0] }}" title="{{ light[1] }}"></span>
   <span class="muted">{{ light[1] }}</span>
 </header>

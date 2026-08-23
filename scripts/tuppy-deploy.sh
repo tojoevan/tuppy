@@ -14,6 +14,16 @@ cd "$REPO" || exit 1
 exec >> "$LOG" 2>&1
 echo "$(date '+%F %T') --- deploy triggered ---"
 
+# 写部署结果状态文件，供前台「更新」按钮右侧显示成功/失败图标
+STATUS="$REPO/.deploy-status.json"
+write_status(){
+  local s="$1" m="$2"
+  cat > "$STATUS" <<EOF
+{"ts":"$(date '+%F %T')","status":"$s","msg":"$m"}
+EOF
+  chown www:www "$STATUS" 2>/dev/null || true
+}
+
 # VPS->GitHub 偶发 GnuTLS 抖动：fetch 加重试（最多 6 次，单次上限 40s，失败间隔 3s）
 OK=0
 for attempt in 1 2 3 4 5 6; do
@@ -26,6 +36,7 @@ for attempt in 1 2 3 4 5 6; do
 done
 if [ "$OK" -ne 1 ]; then
   echo "$(date '+%F %T') fetch failed after 6 retries, skip this round"
+  write_status fail "fetch failed after 6 retries (GnuTLS/network)"
   exit 0
 fi
 
@@ -33,6 +44,7 @@ LOCAL=$(sudo -u www git rev-parse HEAD)
 REMOTE=$(sudo -u www git rev-parse origin/main)
 if [ "$LOCAL" = "$REMOTE" ]; then
   echo "$(date '+%F %T') already up to date ($LOCAL)"
+  write_status ok "already up to date ($LOCAL)"
   exit 0
 fi
 
@@ -46,9 +58,12 @@ if sudo -u www git diff --name-only "$LOCAL" HEAD | grep -qvE '^(docs/|README|CH
   CODE=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8321/login || echo 000)
   if [ "$CODE" = "200" ]; then
     echo "$(date '+%F %T') restart ok, web healthy ($CODE)"
+    write_status ok "deployed $LOCAL -> $REMOTE, restart ok"
   else
     echo "$(date '+%F %T') WARN: web not healthy after restart: $CODE"
+    write_status ok "deployed $LOCAL -> $REMOTE (WARN web $CODE)"
   fi
 else
   echo "$(date '+%F %T') docs-only change, no restart"
+  write_status ok "docs-only change, no restart"
 fi

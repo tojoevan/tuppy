@@ -107,17 +107,31 @@ def test_choice_no_writes_no_entry(db):
     assert st and st["answered_at"]
 
 
-def test_skip_records_state(db):
+def test_skip_does_not_block_reask(db):
+    """跳过代表『当前不想答/没数据』，不算完成，下次仍可再抽到。"""
     q = engine.next_question(db)
     engine.record_qa_skip(db, q["key"])
     st = db.execute(
         "SELECT skipped_at FROM qa_state WHERE key=?", (q["key"],)
     ).fetchone()
     assert st and st["skipped_at"]
-    # 跳过后再 next_question 不再返回它
-    q2 = engine.next_question(db)
-    if q2:
-        assert q2["key"] != q["key"]
+    # 跳过后该 key 仍可能在待问池（_qa_done 只看 answered_at）
+    assert not engine._qa_done(db, q["key"])
+    # 多轮抽取都能抽到它（证明未屏蔽）
+    for _ in range(20):
+        again = engine.next_question(db)
+        assert again is not None
+        if again["key"] == q["key"]:
+            break
+    else:
+        pytest.fail("跳过的题在 20 次随机抽取中从未再现，疑似被屏蔽")
+
+
+def test_next_question_is_random_not_sequential(db):
+    """抽题应是随机的，而非永远返回第一道未答题。"""
+    seen = {engine.next_question(db)["key"] for _ in range(30)}
+    # 三道未答题（血压/电费/证件）中至少出现 2 种不同 key，证明非固定顺序
+    assert len(seen) >= 2
 
 
 def test_invalid_amount_not_written(db):

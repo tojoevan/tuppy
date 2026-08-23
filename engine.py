@@ -648,20 +648,23 @@ def derive_questions(conn):
 
 
 def _qa_done(conn, key):
+    """只有真正答过（answered_at）才算完成；跳过（skipped_at）不算——
+    跳过代表『当前不想答/没数据』，下次循环仍可再问。"""
     row = conn.execute(
-        "SELECT answered_at, skipped_at FROM qa_state WHERE key=?", (key,)
+        "SELECT answered_at FROM qa_state WHERE key=?", (key,)
     ).fetchone()
     if not row:
         return False
-    return bool(row["answered_at"] or row["skipped_at"])
+    return bool(row["answered_at"])
 
 
 def next_question(conn):
-    """抽一道未答过的题（优先没答过的；都答过返回 None）。"""
-    for q in derive_questions(conn):
-        if not _qa_done(conn, q["key"]):
-            return q
-    return None
+    """从未答过的题里随机抽一道（循环随机问答；跳过不屏蔽，答过才停）。"""
+    import random
+    pool = [q for q in derive_questions(conn) if not _qa_done(conn, q["key"])]
+    if not pool:
+        return None
+    return random.choice(pool)
 
 
 def record_qa_skip(conn, key):

@@ -390,6 +390,14 @@ def entry_edit(eid):
 @app.route("/entry/<int:eid>/delete", methods=["POST"])
 def entry_delete(eid):
     conn = engine.get_db()
+    # 级联清除关联信息：先清关联待办，再清关联提议，最后删记录本身。
+    # 否则 proposals 里 entry_id 指向已删 entry 的过期/拒绝提议会残留在首页「最近处理过的」。
+    conn.execute(
+        "DELETE FROM todos WHERE proposal_id IN "
+        "(SELECT id FROM proposals WHERE entry_id=?)",
+        (eid,),
+    )
+    conn.execute("DELETE FROM proposals WHERE entry_id=?", (eid,))
     conn.execute("DELETE FROM entries WHERE id=?", (eid,))
     conn.commit()
     conn.close()

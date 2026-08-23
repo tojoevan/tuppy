@@ -597,6 +597,21 @@ def run_shift(shift):
 
 # ---------- 微问答：从规则派生的轻量信息补充 ----------
 
+def _domain_has_entry(conn, dom, cat):
+    """该 domain(+category) 是否已有对应 entry。有则视为信息已存在，
+    微问答的 expiry/surge 补信息题应跳过（避免「你的信用卡」这种没指定哪条的尴尬）。"""
+    if cat:
+        row = conn.execute(
+            "SELECT 1 FROM entries WHERE domain=? AND category=? LIMIT 1",
+            (dom, cat),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT 1 FROM entries WHERE domain=? LIMIT 1", (dom,)
+        ).fetchone()
+    return bool(row)
+
+
 def derive_questions(conn):
     """扫描已启用规则，按 template 派生微问答题。
 
@@ -606,6 +621,9 @@ def derive_questions(conn):
     - surge：问上次数值（填空数字）
     - habit+gap：问今天记没记（选择 记了/还没）
     - overlap：跳过（冲突类不适合微问答）
+
+    护栏：expiry/surge 题若 domain(+category) 已有 entry，则跳过——信息已存在，
+    不该再用笼统问法补（如「你的信用卡」没指定哪张）。
     """
     out = []
     for rule in conn.execute(
@@ -618,6 +636,10 @@ def derive_questions(conn):
         # 避免「物品 的到期日」这类生硬且无解的病句。
         subject = f"{dom}·{cat}" if cat else f"你的{dom}"
         key = f"qa:{tpl}:{dom}:{cat}"
+        if tpl in ("expiry", "surge"):
+            # 已有 entry 则不问（信息已存在，且笼统问法无解）
+            if _domain_has_entry(conn, dom, cat):
+                continue
         if tpl == "expiry":
             out.append({
                 "key": key, "kind": "fill", "domain": dom, "category": cat,

@@ -167,3 +167,22 @@ def test_question_label_no_stray_dot(db):
     qs = {q["key"]: q for q in engine.derive_questions(db)}
     assert qs["qa:expiry:证件:"]["q"] == "你的证件 的到期日是什么时候？"
     assert "·" not in qs["qa:expiry:证件:"]["q"]
+
+
+def test_expiry_skipped_when_domain_has_entry(db):
+    """方案 A 护栏：domain（+category）已有 entry 时，expiry/surge 补信息题跳过。
+
+    避免「你的信用卡的到期日」这种没指定哪条、无法回答的笼统问法。
+    """
+    # 证件 domain 原本会派生 expiry 题
+    assert "qa:expiry:证件:" in {q["key"] for q in engine.derive_questions(db)}
+    # 录入一条证件 entry 后，该题消失
+    db.execute(
+        "INSERT INTO entries (domain,category,title,happened_at,source)"
+        " VALUES ('证件','','护照','2027-01-01','manual')"
+    )
+    db.commit()
+    keys = {q["key"] for q in engine.derive_questions(db)}
+    assert "qa:expiry:证件:" not in keys
+    # 其它无 entry 的题不受影响
+    assert "qa:surge:账本:电费" in keys
